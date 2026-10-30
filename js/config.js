@@ -1,6 +1,6 @@
 /**
  * Yohoo School - Frontend Configuration
- * สำหรับหน้าเว็บ (รันใน Browser)
+ * สำหรับหน้าเว็บที่ Deploy บน Vercel
  */
 
 const CONFIG = {
@@ -11,11 +11,8 @@ const CONFIG = {
     },
 
     api: {
-        // ⚠️ เปลี่ยน URL นี้ให้เป็น URL ของ Bot ที่ Deploy จริง
-        botApiUrl: window.location.hostname === 'localhost' 
-            ? 'http://localhost:3000' 
-            : 'https://your-bot-project.onrender.com',
-        
+        // ✅ ใช้ Vercel API Route โดยตรง (ไม่ต้องมีเซิร์ฟเวอร์แยก)
+        botApiUrl: window.location.origin,
         timeout: 15000
     },
 
@@ -28,7 +25,7 @@ const CONFIG = {
 
     messages: {
         success: {
-            register: 'ลงทะเบียนสำเร็จ! คุณได้รับยศ Member ใน Discord แล้ว'
+            register: 'ลงทะเบียนสำเร็จ! คุณได้รับสิทธิ์เข้าเซิร์ฟเวอร์แล้ว'
         },
         error: {
             authRequired: 'กรุณาเข้าสู่ระบบด้วย Discord ก่อน',
@@ -41,6 +38,4 @@ const CONFIG = {
 };
 
 // ทำให้ CONFIG เป็น global variable
-if (typeof window !== 'undefined') {
-    window.CONFIG = CONFIG;
-}
+window.CONFIG = CONFIG;
