@@ -1,122 +1,46 @@
-require('dotenv').config();
-const { Client, GatewayIntentBits } = require('discord.js');
-const express = require('express');
-const cors = require('cors'); // เพิ่มบรรทัดนี้
-const { createClient } = require('@supabase/supabase-js');
+/**
+ * Yohoo School - Frontend Configuration
+ * สำหรับหน้าเว็บ (รันใน Browser)
+ */
 
 const CONFIG = {
-    botToken: process.env.DISCORD_BOT_TOKEN,
-    clientId: process.env.DISCORD_CLIENT_ID,
-    guildId: process.env.DISCORD_GUILD_ID,
-    memberRoleId: process.env.DISCORD_MEMBER_ROLE_ID,
-    webhookUrl: process.env.DISCORD_WEBHOOK_URL,
-    port: process.env.PORT || 3000,
-    supabaseUrl: process.env.SUPABASE_URL,
-    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY
+    discord: {
+        clientId: '1525774458495959262',
+        redirectUri: window.location.origin + '/register.html',
+        scopes: ['identify', 'email']
+    },
+
+    api: {
+        // ⚠️ เปลี่ยน URL นี้ให้เป็น URL ของ Bot ที่ Deploy จริง
+        botApiUrl: window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000' 
+            : 'https://your-bot-project.onrender.com',
+        
+        timeout: 15000
+    },
+
+    validation: {
+        minAge: 10,
+        maxAge: 100,
+        nameMinLength: 2,
+        nameMaxLength: 50
+    },
+
+    messages: {
+        success: {
+            register: 'ลงทะเบียนสำเร็จ! คุณได้รับยศ Member ใน Discord แล้ว'
+        },
+        error: {
+            authRequired: 'กรุณาเข้าสู่ระบบด้วย Discord ก่อน',
+            invalidData: 'ข้อมูลไม่ถูกต้อง กรุณาตรวจสอบ',
+            duplicate: 'บัญชีนี้ลงทะเบียนแล้ว',
+            network: 'เกิดข้อผิดพลาดในการเชื่อมต่อ',
+            server: 'เกิดข้อผิดพลาดบนเซิร์ฟเวอร์'
+        }
+    }
 };
 
-const supabase = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
-const client = new Client({
-    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
-});
-
-const app = express();
-
-// ✅ เพิ่ม CORS middleware (ต้องอยู่ก่อน app.use(express.json()))
-app.use(cors({
-    origin: ['https://yohooschool.vercel.app', 'http://localhost:5500', '*'], // อนุญาต origin เหล่านี้
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json());
-
-// Health check
-app.get('/health', (req, res) => {
-    res.json({ status: 'ok', botReady: client.isReady() });
-});
-
-// API Register
-app.post('/api/register', async (req, res) => {
-    const { user_id, username, first_name, last_name, date_of_birth, gender } = req.body;
-
-    if (!user_id || !first_name || !last_name) {
-        return res.status(400).json({ success: false, error: 'กรอกข้อมูลไม่ครบ' });
-    }
-
-    try {
-        // 1. บันทึกลง Supabase
-        const { error: dbError } = await supabase
-            .from('players')
-            .insert([{
-                discord_id: user_id,
-                discord_username: username,
-                first_name,
-                last_name,
-                date_of_birth,
-                gender,
-                is_whitelisted: true,
-                status: 'approved'
-            }]);
-
-        if (dbError) {
-            if (dbError.code === '23505') {
-                return res.status(409).json({ success: false, error: 'บัญชีนี้ลงทะเบียนแล้ว' });
-            }
-            throw new Error(dbError.message);
-        }
-
-        // 2. ส่ง Webhook
-        if (CONFIG.webhookUrl) {
-            const genderLabels = { male: 'ชาย', female: 'หญิง', other: 'อื่นๆ' };
-            await fetch(CONFIG.webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: '✅ **ลงทะเบียนใหม่!**',
-                    embeds: [{
-                        title: ' ผู้เล่นใหม่',
-                        color: 0x10B981,
-                        fields: [
-                            { name: '👤 ชื่อ', value: `${first_name} ${last_name}`, inline: true },
-                            { name: ' เกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
-                            { name: '⚧ เพศ', value: genderLabels[gender] || 'ไม่ระบุ', inline: true },
-                            { name: '💬 Discord', value: `<@${user_id}>`, inline: false }
-                        ]
-                    }]
-                })
-            });
-        }
-
-        // 3. ให้ Role
-        const guild = await client.guilds.fetch(CONFIG.guildId);
-        const member = await guild.members.fetch(user_id);
-        if (!member.roles.cache.has(CONFIG.memberRoleId)) {
-            await member.roles.add(CONFIG.memberRoleId);
-        }
-
-        res.json({ success: true, message: 'ลงทะเบียนสำเร็จ!' });
-
-    } catch (error) {
-        console.error('❌ Error:', error.message);
-        if (error.code === 10007) {
-            return res.status(404).json({ success: false, error: 'ไม่พบผู้ใช้ใน Discord' });
-        }
-        res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาด' });
-    }
-});
-
-client.once('ready', () => {
-    console.log(`✅ Bot: ${client.user.tag}`);
-});
-
-async function start() {
-    app.listen(CONFIG.port, () => {
-        console.log(`🌐 API: http://localhost:${CONFIG.port}`);
-        console.log(`🔓 CORS enabled for: yohooschool.vercel.app`);
-    });
-    await client.login(CONFIG.botToken);
+// ทำให้ CONFIG เป็น global variable
+if (typeof window !== 'undefined') {
+    window.CONFIG = CONFIG;
 }
-
-start();
