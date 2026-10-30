@@ -70,10 +70,10 @@
                     <img src="images/logo.png" alt="Yohoo School" class="form-title-logo">
                     แบบฟอร์มลงทะเบียน
                 </h1>
-                <p class="form-subtitle">กรอกข้อมูลเพื่อเข้าร่วม Yohoo School</p>
+                <p class="form-subtitle">กรอกข้อมูลเพื่อรับยศ Member และเข้าเซิร์ฟเวอร์</p>
             </div>
 
-            <!-- Progress Steps -->
+            <!-- Progress Steps (ปรับเหลือ 2 ขั้นตอน) -->
             <div class="progress-container">
                 <div class="progress-line"></div>
                 <div class="progress-fill" id="progressFill"></div>
@@ -84,10 +84,6 @@
                     </div>
                     <div class="step" data-step="2">
                         <div class="step-number">2</div>
-                        <span class="step-label">ข้อมูลเกม</span>
-                    </div>
-                    <div class="step" data-step="3">
-                        <div class="step-number">3</div>
                         <span class="step-label">ยืนยัน</span>
                     </div>
                 </div>
@@ -95,6 +91,7 @@
 
             <!-- Form -->
             <form id="registerForm" class="register-form">
+                
                 <!-- Step 1: Personal Info -->
                 <div class="form-step active" data-step="1">
                     <div class="form-row">
@@ -166,103 +163,62 @@
 
                     <div class="form-actions">
                         <button type="button" class="btn-primary" onclick="nextStep(2)">
-                            <span>ต่อไป</span>
+                            <span>ตรวจสอบข้อมูล</span>
                             <i class="fas fa-arrow-right"></i>
                         </button>
                     </div>
                 </div>
 
-                <!-- Step 2: Game Info -->
+                <!-- Step 2: Confirm (เดิมคือ Step 3) -->
                 <div class="form-step" data-step="2">
-                    <div class="form-group">
-                        <label class="form-label" for="steamHex">
-                            <i class="fab fa-steam"></i>
-                            Steam Hex ID
-                            <span class="required">*</span>
-                        </label>
-                        <input type="text" id="steamHex" class="form-input" placeholder="steam:110000123456789" required>
-                        <span class="input-error" id="steamHexError"></span>
-                        <small class="form-hint">
-                            <i class="fas fa-circle-info"></i>
-                            รูปแบบ: steam:1100001xxxxxxx
-                        </small>
+                    <div class="summary-card">
+                        <h3 class="summary-title">
+                            <i class="fas fa-clipboard-check"></i>
+                            สรุปข้อมูลของคุณ
+                        </h3>
+                        <div class="summary-content" id="summaryContent">
+                            <!-- ข้อมูลจะถูกเติมโดย JavaScript -->
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="fivemLicense">
-                            <i class="fas fa-id-card"></i>
-                            FiveM License
-                            <span class="required">*</span>
-                        </label>
-                        <input type="text" id="fivemLicense" class="form-input" placeholder="license:xxxxxxxx" required>
-                        <span class="input-error" id="fivemLicenseError"></span>
-                        <small class="form-hint">
-                            <i class="fas fa-circle-info"></i>
-                            กด F8 ในเกมเพื่อดู License
-                        </small>
+                    <div class="warning-box">
+                        <i class="fas fa-shield-halved"></i>
+                        <span>การลงทะเบียนนี้จะให้ยศ Member ใน Discord เพื่อใช้เข้าเซิร์ฟเวอร์ Yohoo School</span>
                     </div>
 
                     <div class="form-actions">
                         <button type="button" class="btn-secondary" onclick="prevStep(1)">
                             <i class="fas fa-arrow-left"></i>
-                            <span>ย้อนกลับ</span>
-                        </button>
-                        <button type="button" class="btn-primary" onclick="nextStep(3)">
-                            <span>ต่อไป</span>
-                            <i class="fas fa-arrow-right"></i>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Step 3: Confirm -->
-                <div class="form-step" data-step="3">
-                    <div class="summary-card">
-                        <h3 class="summary-title">
-                            <i class="fas fa-clipboard-list"></i>
-                            สรุปข้อมูล
-                        </h3>
-                        <div class="summary-content" id="summaryContent">
-                            <!-- Dynamic content -->
-                        </div>
-                    </div>
-
-                    <div class="warning-box">
-                        <i class="fas fa-triangle-exclamation"></i>
-                        <span>กรุณาตรวจสอบข้อมูลให้ถูกต้องก่อนกดลงทะเบียน</span>
-                    </div>
-
-                    <div class="form-actions">
-                        <button type="button" class="btn-secondary" onclick="prevStep(2)">
-                            <i class="fas fa-arrow-left"></i>
-                            <span>แก้ไข</span>
+                            <span>แก้ไขข้อมูล</span>
                         </button>
                         <button type="submit" class="btn-primary btn-submit">
                             <i class="fas fa-paper-plane"></i>
-                            <span>ลงทะเบียนเลย!</span>
+                            <span>ยืนยันการลงทะเบียน</span>
                         </button>
                     </div>
                 </div>
+
             </form>
 
             <!-- Success Message -->
             <div class="success-message" id="successMessage" style="display: none;">
                 <img src="images/logo.png" alt="Yohoo School" class="success-logo-img">
-                <h2 class="success-title">ลงทะเบียนสำเร็จ!</h2>
+                <h2 class="success-title">ลงทะเบียนสำเร็จ! 🎉</h2>
                 <p class="success-text">คุณได้รับยศ <strong>Member</strong> ใน Discord แล้ว</p>
                 <div class="success-steps">
-                    <h4>ขั้นตอนต่อไป:</h4>
+                    <h4>คุณสามารถเข้าเซิร์ฟเวอร์ได้เลย:</h4>
                     <ol>
-                        <li>
-                            <i class="fas fa-clock"></i>
-                            <span>รอทีมงานอนุมัติ (ปกติภายใน 10 นาที)</span>
-                        </li>
                         <li>
                             <i class="fas fa-gamepad"></i>
                             <span>เปิดเกม FiveM</span>
                         </li>
                         <li>
                             <i class="fas fa-server"></i>
-                            <span>เชื่อมต่อเซิร์ฟเวอร์ Yohoo School</span>
+                            <span>ค้นหาและเชื่อมต่อเซิร์ฟเวอร์ <strong>Yohoo School</strong></span>
+                        </li>
+                        <li>
+                            <i class="fas fa-heart"></i>
+                            <span>สนุกไปกับเพื่อนๆ!</span>
                         </li>
                     </ol>
                 </div>
@@ -278,7 +234,7 @@
     <div class="loading-overlay" id="loadingOverlay" style="display: none;">
         <div class="loading-spinner">
             <div class="spinner"></div>
-            <p>กำลังบันทึกข้อมูล...</p>
+            <p>กำลังบันทึกข้อมูลและมอบยศ...</p>
         </div>
     </div>
 
