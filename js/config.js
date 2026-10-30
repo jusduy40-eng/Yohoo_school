@@ -1,24 +1,30 @@
 /**
- * Yohoo School - Configuration
+ * Yohoo School - Configuration (Frontend Safe)
  * Professional Discord Integration System
  */
 
 const CONFIG = {
-    // Discord OAuth2 Settings
+    // Discord OAuth2 Settings (เฉพาะข้อมูลที่ปลอดภัยสำหรับหน้าเว็บ)
     discord: {
-        clientId: 'YOUR_DISCORD_CLIENT_ID',
+        // ✅ ใส่ Client ID จริงจาก Discord Developer Portal ของคุณ
+        clientId: '1525774458495959262', 
+        
+        // ✅ ปล่อยไว้แบบนี้ ระบบจะดึงโดเมนปัจจุบันมาต่อให้อัตโนมัติ
         redirectUri: window.location.origin + '/register.html',
-        botToken: 'YOUR_BOT_TOKEN',
-        guildId: 'YOUR_GUILD_ID',
-        memberRoleId: 'YOUR_MEMBER_ROLE_ID',
-        webhookUrl: 'YOUR_DISCORD_WEBHOOK_URL',
+        
         scopes: ['identify', 'email']
     },
 
-    // API Settings
+    // API Settings (สำหรับเชื่อมต่อกับ Backend/Bot)
     api: {
-        baseUrl: window.location.origin,
-        timeout: 10000
+        // 🔴 สำคัญ: แก้ไข URL นี้ให้ตรงกับที่คุณรัน Bot
+        // - ถ้าทดสอบในเครื่อง (Local): 'http://localhost:3000'
+        // - ถ้า Deploy ขึ้นเว็บแล้ว (เช่น Render/Railway): 'https://ชื่อโปรเจกต์-bot.onrender.com'
+        botApiUrl: window.location.hostname === 'localhost' 
+            ? 'http://localhost:3000' 
+            : 'https://your-bot-project.onrender.com', 
+            
+        timeout: 15000
     },
 
     // Validation Rules
