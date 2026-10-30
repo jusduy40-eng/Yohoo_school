@@ -1,0 +1,29 @@
+{
+  "name": "yohoo-school",
+  "version": "1.0.0",
+  "description": "Yohoo School - FiveM Roleplay Registration System",
+  "main": "bot/bot.js",
+  "scripts": {
+    "start": "node bot/bot.js",
+    "dev": "nodemon bot/bot.js",
+    "bot": "node bot/bot.js"
+  },
+  "keywords": [
+    "fivem",
+    "discord",
+    "registration",
+    "whitelist"
+  ],
+  "author": "Yohoo Team",
+  "license": "MIT",
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "express": "^4.18.2"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.2"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  }
+}
