@@ -1,149 +1,119 @@
-/**
- * Yohoo School - Discord Bot
- * Handles role assignment and server management
- */
-
-const { Client, GatewayIntentBits, REST, Routes } = require('discord.js');
+require('dotenv').config();
+const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
+const { createClient } = require('@supabase/supabase-js');
 
-// Configuration
 const CONFIG = {
-    botToken: process.env.BOT_TOKEN || 'YOUR_BOT_TOKEN',
-    clientId: process.env.CLIENT_ID || 'YOUR_CLIENT_ID',
-    guildId: process.env.GUILD_ID || 'YOUR_GUILD_ID',
-    port: process.env.PORT || 3000
+    botToken: process.env.DISCORD_BOT_TOKEN,
+    clientId: process.env.DISCORD_CLIENT_ID,
+    guildId: process.env.DISCORD_GUILD_ID,
+    memberRoleId: process.env.DISCORD_MEMBER_ROLE_ID,
+    webhookUrl: process.env.DISCORD_WEBHOOK_URL,
+    port: process.env.PORT || 3000,
+    supabaseUrl: process.env.SUPABASE_URL,
+    supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY
 };
 
-// Initialize Discord Client
+if (!CONFIG.botToken || !CONFIG.supabaseUrl || !CONFIG.supabaseKey) {
+    console.error('❌ ERROR: ตรวจสอบไฟล์ .env ให้ครบ');
+    process.exit(1);
+}
+
+const supabase = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-        GatewayIntentBits.GuildMembers
-    ]
+    intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
-// Initialize Express Server
 const app = express();
 app.use(express.json());
 
-// Health check endpoint
 app.get('/health', (req, res) => {
-    res.json({
-        status: 'ok',
-        bot: client.isReady(),
-        timestamp: new Date().toISOString()
-    });
+    res.json({ status: 'ok', botReady: client.isReady() });
 });
 
-// Role assignment endpoint
-app.post('/give-role', async (req, res) => {
-    const { user_id, role_id, guild_id } = req.body;
+app.post('/api/register', async (req, res) => {
+    const { user_id, username, first_name, last_name, date_of_birth, gender, steam_hex, fivem_license } = req.body;
 
-    if (!user_id || !role_id || !guild_id) {
-        return res.status(400).json({
-            success: false,
-            error: 'Missing required parameters'
-        });
+    if (!user_id || !first_name || !last_name || !steam_hex || !fivem_license) {
+        return res.status(400).json({ success: false, error: 'กรอกข้อมูลไม่ครบ' });
     }
 
     try {
-        const guild = await client.guilds.fetch(guild_id);
-        const member = await guild.members.fetch(user_id);
-        
-        await member.roles.add(role_id);
+        // 1. บันทึกลง Supabase
+        const { error: dbError } = await supabase
+            .from('players')
+            .insert([{
+                discord_id: user_id,
+                discord_username: username,
+                steam_hex,
+                fivem_license,
+                first_name,
+                last_name,
+                date_of_birth,
+                gender,
+                is_whitelisted: true,
+                status: 'approved'
+            }]);
 
-        res.json({
-            success: true,
-            message: 'Role assigned successfully',
-            user: member.user.tag
-        });
+        if (dbError) {
+            if (dbError.code === '23505') {
+                return res.status(409).json({ success: false, error: 'บัญชีนี้ลงทะเบียนแล้ว' });
+            }
+            throw new Error(dbError.message);
+        }
+
+        // 2. ส่ง Webhook
+        if (CONFIG.webhookUrl) {
+            const genderLabels = { male: 'ชาย', female: 'หญิง', other: 'อื่นๆ' };
+            await fetch(CONFIG.webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: '✅ **ลงทะเบียนใหม่!**',
+                    embeds: [{
+                        title: '📝 ผู้เล่นใหม่',
+                        color: 0x10B981,
+                        fields: [
+                            { name: '👤 ชื่อ', value: `${first_name} ${last_name}`, inline: true },
+                            { name: '🎂 เกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
+                            { name: '⚧ เพศ', value: genderLabels[gender], inline: true },
+                            { name: '💬 Discord', value: `<@${user_id}>`, inline: false },
+                            { name: '🎮 Steam', value: `\`${steam_hex}\``, inline: true },
+                            { name: '🎟️ FiveM', value: `\`${fivem_license}\``, inline: true }
+                        ]
+                    }]
+                })
+            });
+        }
+
+        // 3. ให้ Role
+        const guild = await client.guilds.fetch(CONFIG.guildId);
+        const member = await guild.members.fetch(user_id);
+        if (!member.roles.cache.has(CONFIG.memberRoleId)) {
+            await member.roles.add(CONFIG.memberRoleId);
+        }
+
+        res.json({ success: true, message: 'ลงทะเบียนสำเร็จ!' });
+
     } catch (error) {
-        console.error('Error assigning role:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
+        console.error('❌ Error:', error.message);
+        if (error.code === 10007) {
+            return res.status(404).json({ success: false, error: 'ไม่พบผู้ใช้ใน Discord' });
+        }
+        res.status(500).json({ success: false, error: 'เกิดข้อผิดพลาด' });
     }
 });
 
-// Remove role endpoint
-app.post('/remove-role', async (req, res) => {
-    const { user_id, role_id, guild_id } = req.body;
-
-    if (!user_id || !role_id || !guild_id) {
-        return res.status(400).json({
-            success: false,
-            error: 'Missing required parameters'
-        });
-    }
-
-    try {
-        const guild = await client.guilds.fetch(guild_id);
-        const member = await guild.members.fetch(user_id);
-        
-        await member.roles.remove(role_id);
-
-        res.json({
-            success: true,
-            message: 'Role removed successfully',
-            user: member.user.tag
-        });
-    } catch (error) {
-        console.error('Error removing role:', error);
-        res.status(500).json({
-            success: false,
-            error: error.message
-        });
-    }
-});
-
-// Discord Bot Events
 client.once('ready', () => {
-    console.log('✅ Bot logged in as', client.user.tag);
-    console.log('📡 Bot is ready to serve', client.guilds.cache.size, 'guilds');
+    console.log(`✅ Bot: ${client.user.tag}`);
 });
 
-client.on('error', (error) => {
-    console.error('Discord client error:', error);
-});
-
-client.on('warn', (warning) => {
-    console.warn('Discord client warning:', warning);
-});
-
-// Start services
-async function startServices() {
-    try {
-        // Login to Discord
-        await client.login(CONFIG.botToken);
-        console.log('🔑 Bot logged in successfully');
-
-        // Start HTTP server
-        app.listen(CONFIG.port, () => {
-            console.log(`🌐 HTTP server running on port ${CONFIG.port}`);
-            console.log(`📋 Endpoints:`);
-            console.log(`   - GET  /health`);
-            console.log(`   - POST /give-role`);
-            console.log(`   - POST /remove-role`);
-        });
-    } catch (error) {
-        console.error('Failed to start services:', error);
-        process.exit(1);
-    }
+async function start() {
+    app.listen(CONFIG.port, () => {
+        console.log(`🌐 API: http://localhost:${CONFIG.port}`);
+        console.log(`💾 Supabase: ${CONFIG.supabaseUrl}`);
+    });
+    await client.login(CONFIG.botToken);
 }
 
-// Graceful shutdown
-process.on('SIGINT', async () => {
-    console.log('\n🛑 Shutting down...');
-    client.destroy();
-    process.exit(0);
-});
-
-process.on('SIGTERM', async () => {
-    console.log('\n🛑 Shutting down...');
-    client.destroy();
-    process.exit(0);
-});
-
-// Start
-startServices();
+start();
