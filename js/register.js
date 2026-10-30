@@ -1,9 +1,5 @@
-/**
- * Yohoo School - Registration System
- */
-
 let currentStep = 1;
-const totalSteps = 3;
+const totalSteps = 2; // เปลี่ยนจาก 3 เป็น 2
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeRegistration();
@@ -14,7 +10,6 @@ async function initializeRegistration() {
     const authRequired = document.getElementById('authRequired');
     const registerContainer = document.getElementById('registerContainer');
 
-    // ตรวจสอบการยืนยันตัวตน
     const isAuthenticated = await auth.requireAuth();
 
     setTimeout(() => {
@@ -56,7 +51,6 @@ function setupFormValidation() {
         input.addEventListener('blur', () => validateInput(input));
     });
 
-    // จำกัดวันเดือนปีเกิด (10 - 100 ปี)
     const dobInput = document.getElementById('dateOfBirth');
     if (dobInput) {
         const today = new Date();
@@ -84,12 +78,6 @@ function validateInput(input) {
     } else if ((input.id === 'firstName' || input.id === 'lastName') && value.length < CONFIG.validation.nameMinLength) {
         isValid = false;
         errorMsg = `ต้องมีความยาวอย่างน้อย ${CONFIG.validation.nameMinLength} ตัวอักษร`;
-    } else if (input.id === 'steamHex' && !/^steam:\d{17}$/.test(value)) {
-        isValid = false;
-        errorMsg = 'รูปแบบไม่ถูกต้อง (เช่น steam:110000123456789)';
-    } else if (input.id === 'fivemLicense' && !/^license:[a-zA-Z0-9]+$/.test(value)) {
-        isValid = false;
-        errorMsg = 'รูปแบบไม่ถูกต้อง (เช่น license:xxxxxxxx)';
     }
 
     if (!isValid) {
@@ -115,7 +103,7 @@ function nextStep(step) {
     if (!validateCurrentStep()) return;
     currentStep = step;
     updateStepUI();
-    if (step === 3) updateSummary();
+    if (step === 2) updateSummary(); // เปลี่ยนจาก 3 เป็น 2
     window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -134,7 +122,6 @@ function validateCurrentStep() {
         if (!validateInput(input)) isValid = false;
     });
 
-    // ตรวจสอบการเลือกเพศในขั้นตอนที่ 1
     if (currentStep === 1) {
         const genderSelected = document.querySelector('input[name="gender"]:checked');
         const genderError = document.getElementById('genderError');
@@ -166,21 +153,33 @@ function updateStepUI() {
 }
 
 function updateSummary() {
-    const genderLabels = { male: 'ชาย 👨', female: 'หญิง 👩', other: 'อื่นๆ 🧑' };
+    const genderLabels = { male: 'ชาย 👨', female: 'หญิง 👩', other: 'อื่นๆ ' };
     const dob = document.getElementById('dateOfBirth').value;
-    const formattedDob = dob ? new Date(dob).toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' }) : '-';
+    const formattedDob = dob ? new Date(dob).toLocaleDateString('th-TH', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    }) : '-';
 
     document.getElementById('summaryContent').innerHTML = `
-        <div class="summary-item"><span class="summary-label">ชื่อ-นามสกุล</span><span class="summary-value">${document.getElementById('firstName').value} ${document.getElementById('lastName').value}</span></div>
-        <div class="summary-item"><span class="summary-label">วันเดือนปีเกิด</span><span class="summary-value">${formattedDob}</span></div>
-        <div class="summary-item"><span class="summary-label">เพศ</span><span class="summary-value">${genderLabels[document.querySelector('input[name="gender"]:checked')?.value] || '-'}</span></div>
-        <div class="summary-item"><span class="summary-label">Steam ID</span><span class="summary-value">${document.getElementById('steamHex').value}</span></div>
-        <div class="summary-item"><span class="summary-label">FiveM License</span><span class="summary-value">${document.getElementById('fivemLicense').value}</span></div>
+        <div class="summary-item">
+            <span class="summary-label">ชื่อ-นามสกุล</span>
+            <span class="summary-value">${document.getElementById('firstName').value} ${document.getElementById('lastName').value}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">วันเดือนปีเกิด</span>
+            <span class="summary-value">${formattedDob}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label">เพศ</span>
+            <span class="summary-value">${genderLabels[document.querySelector('input[name="gender"]:checked')?.value] || '-'}</span>
+        </div>
     `;
 }
 
 async function handleSubmit(e) {
     e.preventDefault();
+    
     const loadingOverlay = document.getElementById('loadingOverlay');
     loadingOverlay.style.display = 'flex';
 
@@ -192,20 +191,21 @@ async function handleSubmit(e) {
         return;
     }
 
+    // ส่งแค่ข้อมูลส่วนตัว (ไม่มี steam, license แล้ว)
     const formData = {
         user_id: user.id,
         username: user.username,
         first_name: document.getElementById('firstName').value.trim(),
         last_name: document.getElementById('lastName').value.trim(),
         date_of_birth: document.getElementById('dateOfBirth').value,
-        gender: document.querySelector('input[name="gender"]:checked')?.value,
-        steam_hex: document.getElementById('steamHex').value.trim(),
-        fivem_license: document.getElementById('fivemLicense').value.trim()
+        gender: document.querySelector('input[name="gender"]:checked')?.value
     };
 
     try {
-        // ส่งข้อมูลไปยัง Bot API (Bot จะเป็นคนส่ง Webhook + ให้ Role เอง)
-        const response = await fetch(`${CONFIG.api.botApiUrl}/api/register`, {
+        // ⚠️ ตรวจสอบว่า CONFIG.api.botApiUrl ตั้งค่าถูกต้อง
+        const apiUrl = `${CONFIG.api.botApiUrl}/api/register`;
+        
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(formData)
