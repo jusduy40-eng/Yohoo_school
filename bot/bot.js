@@ -1,6 +1,7 @@
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
+const cors = require('cors'); // เพิ่มบรรทัดนี้
 const { createClient } = require('@supabase/supabase-js');
 
 const CONFIG = {
@@ -14,27 +15,33 @@ const CONFIG = {
     supabaseKey: process.env.SUPABASE_SERVICE_ROLE_KEY
 };
 
-if (!CONFIG.botToken || !CONFIG.supabaseUrl || !CONFIG.supabaseKey) {
-    console.error('❌ ERROR: ตรวจสอบไฟล์ .env ให้ครบ');
-    process.exit(1);
-}
-
 const supabase = createClient(CONFIG.supabaseUrl, CONFIG.supabaseKey);
 const client = new Client({
     intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
 });
 
 const app = express();
+
+// ✅ เพิ่ม CORS middleware (ต้องอยู่ก่อน app.use(express.json()))
+app.use(cors({
+    origin: ['https://yohooschool.vercel.app', 'http://localhost:5500', '*'], // อนุญาต origin เหล่านี้
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
 app.use(express.json());
 
+// Health check
 app.get('/health', (req, res) => {
     res.json({ status: 'ok', botReady: client.isReady() });
 });
 
+// API Register
 app.post('/api/register', async (req, res) => {
-    const { user_id, username, first_name, last_name, date_of_birth, gender, steam_hex, fivem_license } = req.body;
+    const { user_id, username, first_name, last_name, date_of_birth, gender } = req.body;
 
-    if (!user_id || !first_name || !last_name || !steam_hex || !fivem_license) {
+    if (!user_id || !first_name || !last_name) {
         return res.status(400).json({ success: false, error: 'กรอกข้อมูลไม่ครบ' });
     }
 
@@ -45,8 +52,6 @@ app.post('/api/register', async (req, res) => {
             .insert([{
                 discord_id: user_id,
                 discord_username: username,
-                steam_hex,
-                fivem_license,
                 first_name,
                 last_name,
                 date_of_birth,
@@ -71,15 +76,13 @@ app.post('/api/register', async (req, res) => {
                 body: JSON.stringify({
                     content: '✅ **ลงทะเบียนใหม่!**',
                     embeds: [{
-                        title: '📝 ผู้เล่นใหม่',
+                        title: ' ผู้เล่นใหม่',
                         color: 0x10B981,
                         fields: [
                             { name: '👤 ชื่อ', value: `${first_name} ${last_name}`, inline: true },
-                            { name: '🎂 เกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
-                            { name: '⚧ เพศ', value: genderLabels[gender], inline: true },
-                            { name: '💬 Discord', value: `<@${user_id}>`, inline: false },
-                            { name: '🎮 Steam', value: `\`${steam_hex}\``, inline: true },
-                            { name: '🎟️ FiveM', value: `\`${fivem_license}\``, inline: true }
+                            { name: ' เกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
+                            { name: '⚧ เพศ', value: genderLabels[gender] || 'ไม่ระบุ', inline: true },
+                            { name: '💬 Discord', value: `<@${user_id}>`, inline: false }
                         ]
                     }]
                 })
@@ -111,7 +114,7 @@ client.once('ready', () => {
 async function start() {
     app.listen(CONFIG.port, () => {
         console.log(`🌐 API: http://localhost:${CONFIG.port}`);
-        console.log(`💾 Supabase: ${CONFIG.supabaseUrl}`);
+        console.log(`🔓 CORS enabled for: yohooschool.vercel.app`);
     });
     await client.login(CONFIG.botToken);
 }
