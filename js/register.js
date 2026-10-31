@@ -1,241 +1,228 @@
-// js/register.js - Registration Form Logic (Browser - ห้ามใช้ import!)
-let currentStep = 1;
-const totalSteps = 2;
-
-document.addEventListener('DOMContentLoaded', () => {
-  initializeRegistration();
-});
-
-async function initializeRegistration() {
-  const loadingScreen = document.getElementById('loadingScreen');
-  const authRequired = document.getElementById('authRequired');
-  const registerContainer = document.getElementById('registerContainer');
-
-  const isAuthenticated = await auth.requireAuth();
-
-  setTimeout(() => {
-    if (loadingScreen) {
-      loadingScreen.classList.add('hidden');
-      setTimeout(() => {
-        loadingScreen.style.display = 'none';
-      }, 500);
-    }
-
-    if (!isAuthenticated) {
-      if (authRequired) authRequired.style.display = 'flex';
-      if (registerContainer) registerContainer.style.display = 'none';
-    } else {
-      if (authRequired) authRequired.style.display = 'none';
-      if (registerContainer) registerContainer.style.display = 'block';
-      loadUserInfo();
-      setupFormValidation();
-    }
-  }, 800);
-}
-
-async function loadUserInfo() {
-  const user = await auth.getUser();
-  if (user) {
-    document.getElementById('userName').textContent = user.global_name || user.username;
-    document.getElementById('userDiscord').textContent = `${user.username}#${user.discriminator}`;
-    const avatarUrl = user.avatar
-      ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
-      : `https://cdn.discordapp.com/embed/avatars/${user.discriminator % 5}.png`;
-    document.getElementById('userAvatar').src = avatarUrl;
-  }
-}
-
-function setupFormValidation() {
-  const inputs = document.querySelectorAll('.form-input');
-  inputs.forEach(input => {
-    input.addEventListener('input', () => clearInputError(input));
-    input.addEventListener('blur', () => validateInput(input));
-  });
-
-  const dobInput = document.getElementById('dateOfBirth');
-  if (dobInput) {
-    const today = new Date();
-    const maxDate = new Date(today.getFullYear() - CONFIG.validation.minAge, today.getMonth(), today.getDate());
-    const minDate = new Date(today.getFullYear() - CONFIG.validation.maxAge, today.getMonth(), today.getDate());
-    dobInput.max = maxDate.toISOString().split('T')[0];
-    dobInput.min = minDate.toISOString().split('T')[0];
-  }
-
-  const form = document.getElementById('registerForm');
-  if (form) {
-    form.addEventListener('submit', handleSubmit);
-  }
-}
-
-function validateInput(input) {
-  const value = input.value.trim();
-  const errorElement = document.getElementById(input.id + 'Error');
-  let isValid = true;
-  let errorMsg = '';
-
-  if (!value && input.hasAttribute('required')) {
-    isValid = false;
-    errorMsg = 'กรุณากรอกข้อมูลนี้';
-  } else if ((input.id === 'firstName' || input.id === 'lastName') && value.length < CONFIG.validation.nameMinLength) {
-    isValid = false;
-    errorMsg = `ต้องมีความยาวอย่างน้อย ${CONFIG.validation.nameMinLength} ตัวอักษร`;
-  }
-
-  if (!isValid) {
-    showInputError(input, errorMsg, errorElement);
-  } else {
-    clearInputError(input);
-  }
-  return isValid;
-}
-
-function showInputError(input, message, errorElement) {
-  input.classList.add('error');
-  if (errorElement) errorElement.textContent = message;
-}
-
-function clearInputError(input) {
-  input.classList.remove('error');
-  const errorElement = document.getElementById(input.id + 'Error');
-  if (errorElement) errorElement.textContent = '';
-}
-
-function nextStep(step) {
-  if (!validateCurrentStep()) return;
-  currentStep = step;
-  updateStepUI();
-  if (step === 2) updateSummary();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function prevStep(step) {
-  currentStep = step;
-  updateStepUI();
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
-
-function validateCurrentStep() {
-  const currentFormStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-  const inputs = currentFormStep.querySelectorAll('.form-input[required]');
-  let isValid = true;
-
-  inputs.forEach(input => {
-    if (!validateInput(input)) isValid = false;
-  });
-
-  if (currentStep === 1) {
-    const genderSelected = document.querySelector('input[name="gender"]:checked');
-    const genderError = document.getElementById('genderError');
-    if (!genderSelected) {
-      if (genderError) genderError.textContent = 'กรุณาเลือกเพศ';
-      isValid = false;
-    } else if (genderError) {
-      genderError.textContent = '';
-    }
-  }
-  return isValid;
-}
-
-function updateStepUI() {
-  document.querySelectorAll('.form-step').forEach(step => step.classList.remove('active'));
-  const currentFormStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
-  if (currentFormStep) currentFormStep.classList.add('active');
-
-  document.querySelectorAll('.step').forEach((step, index) => {
-    const stepNum = index + 1;
-    step.classList.remove('active', 'completed');
-    if (stepNum < currentStep) step.classList.add('completed');
-    else if (stepNum === currentStep) step.classList.add('active');
-  });
-
-  const progressFill = document.getElementById('progressFill');
-  const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
-  progressFill.style.width = `${progressPercentage}%`;
-}
-
-function updateSummary() {
-  const genderLabels = { male: 'ชาย 👨', female: 'หญิง 👩', other: 'อื่นๆ 🧑' };
-  const dob = document.getElementById('dateOfBirth').value;
-  const formattedDob = dob ? new Date(dob).toLocaleDateString('th-TH', {
-    year: 'numeric', month: 'long', day: 'numeric'
-  }) : '-';
-
-  document.getElementById('summaryContent').innerHTML = `
-    <div class="summary-item">
-      <span class="summary-label">ชื่อ-นามสกุล</span>
-      <span class="summary-value">${document.getElementById('firstName').value} ${document.getElementById('lastName').value}</span>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ลงทะเบียน - Yohoo School</title>
+  <meta name="description" content="ลงทะเบียนเข้าร่วม Yohoo School">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="register-page">
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="loading-content">
+      <img src="images/logo.png" alt="Yohoo School" class="loading-logo-img">
+      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+      <p class="loading-text">กำลังตรวจสอบการเข้าสู่ระบบ...</p>
     </div>
-    <div class="summary-item">
-      <span class="summary-label">วันเดือนปีเกิด</span>
-      <span class="summary-value">${formattedDob}</span>
+  </div>
+
+  <!-- Background Elements -->
+  <div class="bg-elements">
+    <div class="bg-circle bg-circle-1"></div>
+    <div class="bg-circle bg-circle-2"></div>
+  </div>
+
+  <!-- Auth Required Screen -->
+  <div class="auth-required" id="authRequired" style="display: none;">
+    <div class="auth-card">
+      <img src="images/logo.png" alt="Yohoo School" class="auth-logo-img">
+      <h2>กรุณาเข้าสู่ระบบ</h2>
+      <p>คุณต้องเข้าสู่ระบบด้วย Discord ก่อนจึงจะลงทะเบียนได้</p>
+      <button class="btn-primary" onclick="loginWithDiscord()">
+        <i class="fab fa-discord"></i>
+        <span>เข้าสู่ระบบด้วย Discord</span>
+      </button>
+      <a href="index.html" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+        <span>กลับหน้าหลัก</span>
+      </a>
     </div>
-    <div class="summary-item">
-      <span class="summary-label">เพศ</span>
-      <span class="summary-value">${genderLabels[document.querySelector('input[name="gender"]:checked')?.value] || '-'}</span>
+  </div>
+
+  <!-- Main Content -->
+  <div class="register-container" id="registerContainer" style="display: none;">
+    <div class="register-header">
+      <a href="index.html" class="back-btn">
+        <i class="fas fa-arrow-left"></i>
+        <span>กลับหน้าหลัก</span>
+      </a>
+      <div class="user-card">
+        <img id="userAvatar" class="user-avatar" src="" alt="User Avatar">
+        <div class="user-info">
+          <h2 id="userName">Loading...</h2>
+          <p id="userDiscord">Discord ID</p>
+        </div>
+      </div>
     </div>
-  `;
-}
 
-async function handleSubmit(e) {
-  e.preventDefault();
+    <div class="form-wrapper">
+      <div class="form-header">
+        <h1 class="form-title">
+          <img src="images/logo.png" alt="Yohoo School" class="form-title-logo">
+          แบบฟอร์มลงทะเบียน
+        </h1>
+        <p class="form-subtitle">กรอกข้อมูลเพื่อรับยศ Member และเข้าเซิร์ฟเวอร์</p>
+      </div>
 
-  const loadingOverlay = document.getElementById('loadingOverlay');
-  if (loadingOverlay) loadingOverlay.style.display = 'flex';
+      <!-- Progress Steps -->
+      <div class="progress-container">
+        <div class="progress-line"></div>
+        <div class="progress-fill" id="progressFill"></div>
+        <div class="steps">
+          <div class="step active" data-step="1">
+            <div class="step-number">1</div>
+            <span class="step-label">ข้อมูลส่วนตัว</span>
+          </div>
+          <div class="step" data-step="2">
+            <div class="step-number">2</div>
+            <span class="step-label">ยืนยัน</span>
+          </div>
+        </div>
+      </div>
 
-  const user = await auth.getUser();
-  if (!user) {
-    if (loadingOverlay) loadingOverlay.style.display = 'none';
-    alert('Session หมดอายุ กรุณาเข้าสู่ระบบใหม่');
-    auth.login();
-    return;
-  }
+      <!-- Form -->
+      <form id="registerForm" class="register-form">
+        <!-- Step 1 -->
+        <div class="form-step active" data-step="1">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label" for="firstName">
+                <i class="fas fa-user"></i>
+                ชื่อจริง
+                <span class="required">*</span>
+              </label>
+              <input type="text" id="firstName" class="form-input" placeholder="เช่น สมชาย" required>
+              <span class="input-error" id="firstNameError"></span>
+            </div>
+            <div class="form-group">
+              <label class="form-label" for="lastName">
+                <i class="fas fa-user"></i>
+                นามสกุล
+                <span class="required">*</span>
+              </label>
+              <input type="text" id="lastName" class="form-input" placeholder="เช่น ใจดี" required>
+              <span class="input-error" id="lastNameError"></span>
+            </div>
+          </div>
 
-  const formData = {
-    user_id: user.id,
-    username: user.username,
-    first_name: document.getElementById('firstName').value.trim(),
-    last_name: document.getElementById('lastName').value.trim(),
-    date_of_birth: document.getElementById('dateOfBirth').value,
-    gender: document.querySelector('input[name="gender"]:checked')?.value
-  };
+          <div class="form-group">
+            <label class="form-label" for="dateOfBirth">
+              <i class="fas fa-cake-candles"></i>
+              วันเดือนปีเกิด
+              <span class="required">*</span>
+            </label>
+            <input type="date" id="dateOfBirth" class="form-input" required>
+            <span class="input-error" id="dateOfBirthError"></span>
+            <small class="form-hint">
+              <i class="fas fa-circle-info"></i>
+              อายุต้องอยู่ระหว่าง 10 - 100 ปี
+            </small>
+          </div>
 
-  try {
-    const apiUrl = `${CONFIG.api.botApiUrl}/api/register`;
-    console.log('Sending to:', apiUrl);
+          <div class="form-group">
+            <label class="form-label">
+              <i class="fas fa-venus-mars"></i>
+              เพศ
+              <span class="required">*</span>
+            </label>
+            <div class="gender-options">
+              <label class="gender-option">
+                <input type="radio" name="gender" value="male" required>
+                <div class="gender-card">
+                  <i class="fas fa-mars gender-icon"></i>
+                  <span class="gender-label">ชาย</span>
+                </div>
+              </label>
+              <label class="gender-option">
+                <input type="radio" name="gender" value="female" required>
+                <div class="gender-card">
+                  <i class="fas fa-venus gender-icon"></i>
+                  <span class="gender-label">หญิง</span>
+                </div>
+              </label>
+              <label class="gender-option">
+                <input type="radio" name="gender" value="other" required>
+                <div class="gender-card">
+                  <i class="fas fa-genderless gender-icon"></i>
+                  <span class="gender-label">อื่นๆ</span>
+                </div>
+              </label>
+            </div>
+            <span class="input-error" id="genderError"></span>
+          </div>
 
-    const response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData)
-    });
+          <div class="form-actions">
+            <button type="button" class="btn-primary" onclick="nextStep(2)">
+              <span>ตรวจสอบข้อมูล</span>
+              <i class="fas fa-arrow-right"></i>
+            </button>
+          </div>
+        </div>
 
-    // ตรวจสอบว่าเป็น JSON จริงๆ
-    const contentType = response.headers.get('content-type');
-    let result;
-    
-    if (contentType && contentType.includes('application/json')) {
-      result = await response.json();
-    } else {
-      const text = await response.text();
-      console.error('Non-JSON response:', text);
-      throw new Error('Server returned invalid response');
-    }
+        <!-- Step 2: Confirm -->
+        <div class="form-step" data-step="2">
+          <div class="summary-card">
+            <h3 class="summary-title">
+              <i class="fas fa-clipboard-check"></i>
+              สรุปข้อมูลของคุณ
+            </h3>
+            <div class="summary-content" id="summaryContent"></div>
+          </div>
 
-    if (!response.ok || !result.success) {
-      throw new Error(result.error || CONFIG.messages.error.server);
-    }
+          <div class="warning-box">
+            <i class="fas fa-shield-halved"></i>
+            <span>การลงทะเบียนนี้จะให้ยศ Member ใน Discord เพื่อใช้เข้าเซิร์ฟเวอร์ Yohoo School</span>
+          </div>
 
-    document.getElementById('registerForm').style.display = 'none';
-    const progressContainer = document.querySelector('.progress-container');
-    if (progressContainer) progressContainer.style.display = 'none';
-    const formHeader = document.querySelector('.form-header');
-    if (formHeader) formHeader.style.display = 'none';
-    document.getElementById('successMessage').style.display = 'block';
+          <div class="form-actions">
+            <button type="button" class="btn-secondary" onclick="prevStep(1)">
+              <i class="fas fa-arrow-left"></i>
+              <span>แก้ไขข้อมูล</span>
+            </button>
+            <button type="submit" class="btn-primary btn-submit">
+              <i class="fas fa-paper-plane"></i>
+              <span>ยืนยันการลงทะเบียน</span>
+            </button>
+          </div>
+        </div>
+      </form>
 
-  } catch (error) {
-    console.error('Registration error:', error);
-    alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
-  } finally {
-    if (loadingOverlay) loadingOverlay.style.display = 'none';
-  }
-}
+      <!-- Success Message -->
+      <div class="success-message" id="successMessage" style="display: none;">
+        <img src="images/logo.png" alt="Yohoo School" class="success-logo-img">
+        <h2 class="success-title">ลงทะเบียนสำเร็จ! 🎉</h2>
+        <p class="success-text">คุณได้รับยศ <strong>Member</strong> ใน Discord แล้ว</p>
+        <div class="success-steps">
+          <h4>คุณสามารถเข้าเซิร์ฟเวอร์ได้เลย:</h4>
+          <ol>
+            <li><i class="fas fa-gamepad"></i><span>เปิดเกม FiveM</span></li>
+            <li><i class="fas fa-server"></i><span>ค้นหาและเชื่อมต่อเซิร์ฟเวอร์ <strong>Yohoo School</strong></span></li>
+            <li><i class="fas fa-heart"></i><span>สนุกไปกับเพื่อนๆ!</span></li>
+          </ol>
+        </div>
+        <button class="btn-primary" onclick="window.location.href='index.html'">
+          <i class="fas fa-house"></i>
+          <span>กลับหน้าหลัก</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay" style="display: none;">
+    <div class="loading-spinner">
+      <div class="spinner"></div>
+      <p>กำลังบันทึกข้อมูลและมอบยศ...</p>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/register.js"></script>
+</body>
+</html>
