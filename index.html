@@ -1,276 +1,242 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Yohoo School - FiveM Roleplay Server</title>
-    <meta name="description" content="Yohoo School - โรงเรียน FiveM Roleplay ที่สมบูรณ์แบบ">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yohoo School - FiveM Roleplay Server</title>
+  <meta name="description" content="Yohoo School - โรงเรียน FiveM Roleplay ที่สมบูรณ์แบบ">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700;800&family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    <!-- Loading Screen -->
-    <div class="loading-screen" id="loadingScreen">
-        <div class="loading-content">
-            <img src="images/logo.png" alt="Yohoo School" class="loading-logo-img">
-            <div class="loading-bar">
-                <div class="loading-bar-fill"></div>
-            </div>
-            <p class="loading-text">กำลังโหลด...</p>
-        </div>
+  <!-- Loading Screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="loading-content">
+      <img src="images/logo.png" alt="Yohoo School" class="loading-logo-img">
+      <div class="loading-bar"><div class="loading-bar-fill"></div></div>
+      <p class="loading-text">กำลังโหลด...</p>
     </div>
+  </div>
 
-    <!-- Background Elements -->
-    <div class="bg-elements">
-        <div class="bg-circle bg-circle-1"></div>
-        <div class="bg-circle bg-circle-2"></div>
-        <div class="bg-circle bg-circle-3"></div>
-        <div class="bg-grid"></div>
+  <!-- Background Elements -->
+  <div class="bg-elements">
+    <div class="bg-circle bg-circle-1"></div>
+    <div class="bg-circle bg-circle-2"></div>
+    <div class="bg-grid"></div>
+  </div>
+
+  <!-- Navigation -->
+  <nav class="navbar" id="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="nav-logo">
+        <img src="images/logo.png" alt="Yohoo School" class="nav-logo-img">
+      </a>
+      <ul class="nav-menu" id="navMenu">
+        <li><a href="#home" class="nav-link active">หน้าแรก</a></li>
+        <li><a href="#features" class="nav-link">คุณสมบัติ</a></li>
+        <li><a href="#about" class="nav-link">เกี่ยวกับ</a></li>
+        <li>
+          <button class="btn-login" onclick="handleLoginClick()">
+            <i class="fab fa-discord"></i>
+            <span>เข้าสู่ระบบ</span>
+          </button>
+        </li>
+      </ul>
+      <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle menu">
+        <i class="fas fa-bars"></i>
+      </button>
     </div>
+  </nav>
 
-    <!-- Navigation -->
-    <nav class="navbar" id="navbar">
-        <div class="nav-container">
-            <a href="index.html" class="nav-logo">
-                <img src="images/logo.png" alt="Yohoo School" class="nav-logo-img">
-            </a>
-            <ul class="nav-menu" id="navMenu">
-                <li><a href="#home" class="nav-link active">หน้าแรก</a></li>
-                <li><a href="#features" class="nav-link">คุณสมบัติ</a></li>
-                <li><a href="#about" class="nav-link">เกี่ยวกับ</a></li>
-                <li>
-                    <button class="btn-login" onclick="handleLoginClick()">
-                        <i class="fab fa-discord"></i>
-                        <span>เข้าสู่ระบบ</span>
-                    </button>
-                </li>
-            </ul>
-            <button class="mobile-toggle" id="mobileToggle" aria-label="Toggle menu">
-                <i class="fas fa-bars"></i>
-            </button>
+  <!-- Hero Section -->
+  <section class="hero" id="home">
+    <div class="hero-container">
+      <div class="hero-content">
+        <div class="season-badge">
+          <i class="fas fa-gamepad"></i>
+          <span>SEASON 1 เปิดรับสมัครแล้ว</span>
         </div>
-    </nav>
+        <h1 class="hero-title">
+          <span class="title-line">WELCOME TO</span>
+          <span class="title-highlight">YOHOO</span>
+          <span class="title-line">SCHOOL</span>
+        </h1>
+        <p class="hero-description">
+          โรงเรียน FiveM Roleplay ที่สมบูรณ์แบบ พบกับชุมชนที่เป็นมิตร 
+          กิจกรรมสนุกๆ ระบบเสถียร และกราฟฟิกสุดน่ารัก!
+        </p>
+        <div class="hero-actions">
+          <button class="btn-primary" onclick="handleLoginClick()">
+            <i class="fas fa-user-plus"></i>
+            <span>เริ่มลงทะเบียน</span>
+          </button>
+          <button class="btn-secondary" onclick="scrollToSection('features')">
+            <i class="fas fa-circle-info"></i>
+            <span>เรียนรู้เพิ่มเติม</span>
+          </button>
+        </div>
+        <div class="player-stats">
+          <div class="player-avatars">
+            <img src="https://i.pravatar.cc/100?img=1" alt="Player" class="avatar">
+            <img src="https://i.pravatar.cc/100?img=2" alt="Player" class="avatar">
+            <img src="https://i.pravatar.cc/100?img=3" alt="Player" class="avatar">
+            <img src="https://i.pravatar.cc/100?img=4" alt="Player" class="avatar">
+          </div>
+          <div class="player-info">
+            <span class="player-count">มีผู้เล่นแล้ว <strong>1,000+</strong> คน</span>
+            <div class="online-indicator">
+              <span class="online-dot"></span>
+              <span>ออนไลน์ตอนนี้</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="hero-visual">
+        <div class="game-card">
+          <div class="card-badge"><span>EST. 2026</span></div>
+          <div class="card-header">
+            <img src="images/logo.png" alt="Yohoo School" class="card-logo-img">
+            <h3 class="card-title">YOHOO SCHOOL</h3>
+            <p class="card-subtitle">COMMUNITY • FRIENDS • FUN</p>
+          </div>
+          <div class="card-features">
+            <div class="card-feature">
+              <div class="feature-icon success"><i class="fas fa-check"></i></div>
+              <span>No Toxic 100%</span>
+            </div>
+            <div class="card-feature">
+              <div class="feature-icon warning"><i class="fas fa-trophy"></i></div>
+              <span>Weekly Events & Tournaments</span>
+            </div>
+            <div class="card-feature">
+              <div class="feature-icon primary"><i class="fas fa-gift"></i></div>
+              <span>รางวัลมากมาย</span>
+            </div>
+            <div class="card-feature">
+              <div class="feature-icon info"><i class="fas fa-bolt"></i></div>
+              <span>เซิร์ฟเวอร์เสถียร ลากน้อย</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 
-    <!-- Hero Section -->
-    <section class="hero" id="home">
-        <div class="hero-container">
-            <div class="hero-content">
-                <div class="season-badge">
-                    <i class="fas fa-gamepad"></i>
-                    <span>SEASON 1 เปิดรับสมัครแล้ว</span>
-                </div>
-                <h1 class="hero-title">
-                    <span class="title-line">WELCOME TO</span>
-                    <span class="title-highlight">YOHOO</span>
-                    <span class="title-line">SCHOOL</span>
-                </h1>
-                <p class="hero-description">
-                    โรงเรียน FiveM Roleplay ที่สมบูรณ์แบบ พบกับชุมชนที่เป็นมิตร 
-                    กิจกรรมสนุกๆ ระบบเสถียร และกราฟฟิกสุดน่ารัก!
-                </p>
-                <div class="hero-actions">
-                    <button class="btn-primary" onclick="handleLoginClick()">
-                        <i class="fas fa-user-plus"></i>
-                        <span>เริ่มลงทะเบียน</span>
-                    </button>
-                    <button class="btn-secondary" onclick="scrollToSection('features')">
-                        <i class="fas fa-circle-info"></i>
-                        <span>เรียนรู้เพิ่มเติม</span>
-                    </button>
-                </div>
-                <div class="player-stats">
-                    <div class="player-avatars">
-                        <img src="https://i.pravatar.cc/100?img=1" alt="Player 1" class="avatar">
-                        <img src="https://i.pravatar.cc/100?img=2" alt="Player 2" class="avatar">
-                        <img src="https://i.pravatar.cc/100?img=3" alt="Player 3" class="avatar">
-                        <img src="https://i.pravatar.cc/100?img=4" alt="Player 4" class="avatar">
-                    </div>
-                    <div class="player-info">
-                        <span class="player-count">มีผู้เล่นแล้ว <strong>1,000+</strong> คน</span>
-                        <div class="online-indicator">
-                            <span class="online-dot"></span>
-                            <span>ออนไลน์ตอนนี้</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="hero-visual">
-                <div class="game-card">
-                    <div class="card-badge">
-                        <span>EST. 2026</span>
-                    </div>
-                    <div class="card-header">
-                        <img src="images/logo.png" alt="Yohoo School" class="card-logo-img">
-                        <h3 class="card-title">YOHOO SCHOOL</h3>
-                        <p class="card-subtitle">COMMUNITY • FRIENDS • FUN</p>
-                    </div>
-                    <div class="card-features">
-                        <div class="card-feature">
-                            <div class="feature-icon success">
-                                <i class="fas fa-check"></i>
-                            </div>
-                            <span>No Toxic 100%</span>
-                        </div>
-                        <div class="card-feature">
-                            <div class="feature-icon warning">
-                                <i class="fas fa-trophy"></i>
-                            </div>
-                            <span>Weekly Events & Tournaments</span>
-                        </div>
-                        <div class="card-feature">
-                            <div class="feature-icon primary">
-                                <i class="fas fa-gift"></i>
-                            </div>
-                            <span>รางวัลมากมาย</span>
-                        </div>
-                        <div class="card-feature">
-                            <div class="feature-icon info">
-                                <i class="fas fa-bolt"></i>
-                            </div>
-                            <span>เซิร์ฟเวอร์เสถียร ลากน้อย</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
+  <!-- Features Section -->
+  <section class="features" id="features">
+    <div class="section-header">
+      <div class="section-badge">
+        <i class="fas fa-star"></i>
+        <span>WHY YOHOO?</span>
+      </div>
+      <h2 class="section-title">ทำไมต้อง Yohoo School?</h2>
+      <p class="section-description">ประสบการณ์เกมมิ่งที่ดีที่สุดรอคุณอยู่</p>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon-wrapper"><i class="fas fa-shield-halved"></i></div>
+        <h3 class="feature-title">ระบบเสถียร</h3>
+        <p class="feature-description">เซิร์ฟเวอร์คุณภาพสูง FPS สูง ไม่มีแลค เล่นลื่นไหลตลอด 24 ชม.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrapper"><i class="fas fa-calendar-days"></i></div>
+        <h3 class="feature-title">กิจกรรมทุกสัปดาห์</h3>
+        <p class="feature-description">แข่งขัน ประชันฝีมือ ลุ้นรางวัลของรางวัลมูลค่ามากมาย</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrapper"><i class="fas fa-users"></i></div>
+        <h3 class="feature-title">ชุมชนเป็นมิตร</h3>
+        <p class="feature-description">No Toxic 100% พบกับเพื่อนๆ มากมาย คอยช่วยเหลือกัน</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrapper"><i class="fas fa-palette"></i></div>
+        <h3 class="feature-title">กราฟฟิกน่ารัก</h3>
+        <p class="feature-description">UI/UX ออกแบบมาอย่างสวยงาม สบายตา เล่นสนุก</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrapper"><i class="fas fa-puzzle-piece"></i></div>
+        <h3 class="feature-title">ระบบเกมหลากหลาย</h3>
+        <p class="feature-description">มีระบบเกมให้เลือกเล่นมากมาย ไม่จำเจ</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon-wrapper"><i class="fas fa-gift"></i></div>
+        <h3 class="feature-title">แจกของรางวัล</h3>
+        <p class="feature-description">แจกไอเทมพิเศษ ของรางวัลสำหรับผู้โชคดี</p>
+      </div>
+    </div>
+  </section>
 
-    <!-- Features Section -->
-    <section class="features" id="features">
-        <div class="section-header">
-            <div class="section-badge">
-                <i class="fas fa-star"></i>
-                <span>WHY YOHOO?</span>
-            </div>
-            <h2 class="section-title">ทำไมต้อง Yohoo School?</h2>
-            <p class="section-description">ประสบการณ์เกมมิ่งที่ดีที่สุดรอคุณอยู่</p>
+  <!-- About Section -->
+  <section class="about" id="about">
+    <div class="about-container">
+      <div class="about-content">
+        <div class="section-badge">
+          <i class="fas fa-info-circle"></i>
+          <span>ABOUT US</span>
         </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon-wrapper">
-                    <i class="fas fa-shield-halved"></i>
-                </div>
-                <h3 class="feature-title">ระบบเสถียร</h3>
-                <p class="feature-description">เซิร์ฟเวอร์คุณภาพสูง FPS สูง ไม่มีแลค เล่นลื่นไหลตลอด 24 ชม.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon-wrapper">
-                    <i class="fas fa-calendar-days"></i>
-                </div>
-                <h3 class="feature-title">กิจกรรมทุกสัปดาห์</h3>
-                <p class="feature-description">แข่งขัน ประชันฝีมือ ลุ้นรางวัลของรางวัลมูลค่ามากมาย</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon-wrapper">
-                    <i class="fas fa-users"></i>
-                </div>
-                <h3 class="feature-title">ชุมชนเป็นมิตร</h3>
-                <p class="feature-description">No Toxic 100% พบกับเพื่อนๆ มากมาย คอยช่วยเหลือกัน</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon-wrapper">
-                    <i class="fas fa-palette"></i>
-                </div>
-                <h3 class="feature-title">กราฟฟิกน่ารัก</h3>
-                <p class="feature-description">UI/UX ออกแบบมาอย่างสวยงาม สบายตา เล่นสนุก</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon-wrapper">
-                    <i class="fas fa-puzzle-piece"></i>
-                </div>
-                <h3 class="feature-title">ระบบเกมหลากหลาย</h3>
-                <p class="feature-description">มีระบบเกมให้เลือกเล่นมากมาย ไม่จำเจ</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon-wrapper">
-                    <i class="fas fa-gift"></i>
-                </div>
-                <h3 class="feature-title">แจกของรางวัล</h3>
-                <p class="feature-description">แจกไอเทมพิเศษ ของรางวัลสำหรับผู้โชคดี</p>
-            </div>
+        <h2 class="section-title">เกี่ยวกับ Yohoo School</h2>
+        <p class="about-text">
+          Yohoo School เป็นเซิร์ฟเวอร์ FiveM Roleplay แนวโรงเรียนที่เน้นสร้างชุมชนที่เป็นมิตร 
+          ผู้เล่นสามารถสวมบทบาทเป็นนักเรียน เข้าร่วมกิจกรรมต่างๆ และสร้างมิตรภาพใหม่ๆ
+        </p>
+        <div class="about-stats">
+          <div class="stat-item">
+            <div class="stat-number">1,000+</div>
+            <div class="stat-label">ผู้เล่นทั้งหมด</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">50+</div>
+            <div class="stat-label">กิจกรรมต่อเดือน</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-number">99.9%</div>
+            <div class="stat-label">Uptime</div>
+          </div>
         </div>
-    </section>
+      </div>
+    </div>
+  </section>
 
-    <!-- About Section -->
-    <section class="about" id="about">
-        <div class="about-container">
-            <div class="about-content">
-                <div class="section-badge">
-                    <i class="fas fa-info-circle"></i>
-                    <span>ABOUT US</span>
-                </div>
-                <h2 class="section-title">เกี่ยวกับ Yohoo School</h2>
-                <p class="about-text">
-                    Yohoo School เป็นเซิร์ฟเวอร์ FiveM Roleplay แนวโรงเรียนที่เน้นสร้างชุมชนที่เป็นมิตร 
-                    ผู้เล่นสามารถสวมบทบาทเป็นนักเรียน เข้าร่วมกิจกรรมต่างๆ และสร้างมิตรภาพใหม่ๆ 
-                    เรามุ่งมั่นที่จะสร้างประสบการณ์ที่ดีที่สุดสำหรับผู้เล่นทุกคน
-                </p>
-                <div class="about-stats">
-                    <div class="stat-item">
-                        <div class="stat-number">1,000+</div>
-                        <div class="stat-label">ผู้เล่นทั้งหมด</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">50+</div>
-                        <div class="stat-label">กิจกรรมต่อเดือน</div>
-                    </div>
-                    <div class="stat-item">
-                        <div class="stat-number">99.9%</div>
-                        <div class="stat-label">Uptime</div>
-                    </div>
-                </div>
-            </div>
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-content">
+        <div class="footer-brand">
+          <div class="footer-logo">
+            <img src="images/logo.png" alt="Yohoo School" class="footer-logo-img">
+          </div>
+          <p class="footer-description">FiveM Roleplay Server • Thailand</p>
         </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="footer-container">
-            <div class="footer-content">
-                <div class="footer-brand">
-                    <div class="footer-logo">
-                        <img src="images/logo.png" alt="Yohoo School" class="footer-logo-img">
-                    </div>
-                    <p class="footer-description">FiveM Roleplay Server • Thailand</p>
-                </div>
-                <div class="footer-links">
-                    <h4 class="footer-title">ลิงก์</h4>
-                    <ul class="footer-list">
-                        <li><a href="#home">หน้าแรก</a></li>
-                        <li><a href="#features">คุณสมบัติ</a></li>
-                        <li><a href="#about">เกี่ยวกับ</a></li>
-                    </ul>
-                </div>
-                <div class="footer-social">
-                    <h4 class="footer-title">ติดตามเรา</h4>
-                    <div class="social-links">
-                        <a href="#" class="social-link" aria-label="Discord">
-                            <i class="fab fa-discord"></i>
-                        </a>
-                        <a href="#" class="social-link" aria-label="Facebook">
-                            <i class="fab fa-facebook-f"></i>
-                        </a>
-                        <a href="#" class="social-link" aria-label="YouTube">
-                            <i class="fab fa-youtube"></i>
-                        </a>
-                        <a href="#" class="social-link" aria-label="TikTok">
-                            <i class="fab fa-tiktok"></i>
-                        </a>
-                    </div>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2026 Yohoo School. All rights reserved.</p>
-                <p>Made with <i class="fas fa-heart" style="color: #ef4444;"></i> by Yohoo Team</p>
-            </div>
+        <div class="footer-links">
+          <h4 class="footer-title">ลิงก์</h4>
+          <ul class="footer-list">
+            <li><a href="#home">หน้าแรก</a></li>
+            <li><a href="#features">คุณสมบัติ</a></li>
+            <li><a href="#about">เกี่ยวกับ</a></li>
+          </ul>
         </div>
-    </footer>
+        <div class="footer-social">
+          <h4 class="footer-title">ติดตามเรา</h4>
+          <div class="social-links">
+            <a href="#" class="social-link" aria-label="Discord"><i class="fab fa-discord"></i></a>
+            <a href="#" class="social-link" aria-label="Facebook"><i class="fab fa-facebook-f"></i></a>
+            <a href="#" class="social-link" aria-label="YouTube"><i class="fab fa-youtube"></i></a>
+            <a href="#" class="social-link" aria-label="TikTok"><i class="fab fa-tiktok"></i></a>
+          </div>
+        </div>
+      </div>
+      <div class="footer-bottom">
+        <p>&copy; 2026 Yohoo School. All rights reserved.</p>
+        <p>Made with <i class="fas fa-heart" style="color: #ef4444;"></i> by Yohoo Team</p>
+      </div>
+    </div>
+  </footer>
 
-    <script src="js/config.js"></script>
-    <script src="js/auth.js"></script>
-    <script src="js/main.js"></script>
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/main.js"></script>
 </body>
 </html>
