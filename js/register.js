@@ -1,4 +1,4 @@
-// js/register.js - Frontend Registration Form
+// js/register.js - Registration Form Logic (Browser)
 let currentStep = 1;
 const totalSteps = 2;
 
