@@ -1,107 +1,122 @@
-// js/main.js - Main Page Logic
-document.addEventListener('DOMContentLoaded', () => {
-  initializeApp();
-});
+// js/auth.js - Discord OAuth2 Authentication (Browser)
 
-function initializeApp() {
-  setupLoadingScreen();
-  setupNavigation();
-  setupScrollEffects();
-  setupAnimations();
-}
-
-function setupLoadingScreen() {
-  const loadingScreen = document.getElementById('loadingScreen');
-  window.addEventListener('load', () => {
-    setTimeout(() => {
-      if (loadingScreen) {
-        loadingScreen.classList.add('hidden');
-        setTimeout(() => {
-          loadingScreen.style.display = 'none';
-        }, 500);
-      }
-    }, 800);
-  });
-
-  setTimeout(() => {
-    if (loadingScreen && !loadingScreen.classList.contains('hidden')) {
-      loadingScreen.classList.add('hidden');
-    }
-  }, 3000);
-}
-
-function setupNavigation() {
-  const mobileToggle = document.getElementById('mobileToggle');
-  const navMenu = document.getElementById('navMenu');
-  const navLinks = document.querySelectorAll('.nav-link');
-
-  if (mobileToggle) {
-    mobileToggle.addEventListener('click', () => {
-      navMenu.classList.toggle('active');
-      const icon = mobileToggle.querySelector('i');
-      if (navMenu.classList.contains('active')) {
-        icon.classList.remove('fa-bars');
-        icon.classList.add('fa-xmark');
-      } else {
-        icon.classList.remove('fa-xmark');
-        icon.classList.add('fa-bars');
-      }
-    });
+class AuthManager {
+  constructor() {
+    this.token = null;
+    this.user = null;
+    this.init();
   }
 
-  navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
-      navLinks.forEach(l => l.classList.remove('active'));
-      link.classList.add('active');
-      if (navMenu && navMenu.classList.contains('active')) {
-        navMenu.classList.remove('active');
-        const icon = mobileToggle.querySelector('i');
-        icon.classList.remove('fa-xmark');
-        icon.classList.add('fa-bars');
-      }
-    });
-  });
-}
+  init() {
+    this.checkAuthFromHash();
+    this.token = this.getToken();
+  }
 
-function setupScrollEffects() {
-  const navbar = document.getElementById('navbar');
-  window.addEventListener('scroll', () => {
-    if (navbar) {
-      if (window.scrollY > 50) {
-        navbar.classList.add('scrolled');
-      } else {
-        navbar.classList.remove('scrolled');
+  checkAuthFromHash() {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.substring(1));
+      const token = params.get('access_token');
+      const expiresIn = params.get('expires_in');
+
+      if (token) {
+        const authData = {
+          token,
+          expiresIn,
+          timestamp: Date.now()
+        };
+        localStorage.setItem('discord_auth', JSON.stringify(authData));
+        window.history.replaceState({}, document.title, window.location.pathname);
       }
     }
-  });
-}
+  }
 
-function setupAnimations() {
-  const observerOptions = {
-    threshold: 0.1,
-    rootMargin: '0px 0px -50px 0px'
-  };
+  getToken() {
+    const authData = localStorage.getItem('discord_auth');
+    if (!authData) return null;
 
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        entry.target.style.opacity = '1';
-        entry.target.style.transform = 'translateY(0)';
+    try {
+      const data = JSON.parse(authData);
+      const expiresAt = data.timestamp + (data.expiresIn * 1000);
+      if (Date.now() > expiresAt) {
+        this.clearAuth();
+        return null;
       }
-    });
-  }, observerOptions);
+      return data.token;
+    } catch (error) {
+      this.clearAuth();
+      return null;
+    }
+  }
 
-  document.querySelectorAll('.feature-card, .stat-item').forEach((el, index) => {
-    el.style.opacity = '0';
-    el.style.transform = 'translateY(20px)';
-    el.style.transition = `all 0.6s ease ${index * 0.1}s`;
-    observer.observe(el);
-  });
+  async getUser() {
+    if (this.user) return this.user;
+
+    const token = this.getToken();
+    if (!token) return null;
+
+    try {
+      const response = await fetch('https://discord.com/api/users/@me', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) throw new Error('Failed to fetch user');
+
+      this.user = await response.json();
+      return this.user;
+    } catch (error) {
+      console.error('Auth error:', error);
+      this.clearAuth();
+      return null;
+    }
+  }
+
+  getAuthUrl() {
+    const params = new URLSearchParams({
+      client_id: CONFIG.discord.clientId,
+      redirect_uri: CONFIG.discord.redirectUri,
+      response_type: 'token',
+      scope: CONFIG.discord.scopes.join(' ')
+    });
+    return `https://discord.com/api/oauth2/authorize?${params.toString()}`;
+  }
+
+  login() {
+    window.location.href = this.getAuthUrl();
+  }
+
+  logout() {
+    this.clearAuth();
+    window.location.href = 'index.html';
+  }
+
+  clearAuth() {
+    localStorage.removeItem('discord_auth');
+    this.token = null;
+    this.user = null;
+  }
+
+  isAuthenticated() {
+    return !!this.getToken();
+  }
+
+  async requireAuth() {
+    if (!this.isAuthenticated()) return false;
+    const user = await this.getUser();
+    return !!user;
+  }
 }
 
-function scrollToSection(sectionId) {
-  const element = document.getElementById(sectionId);
-  if (element) {
-    element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+const auth = new AuthManager();
+
+function loginWithDiscord() {
+  auth.login();
+}
+
+function handleLoginClick() {
+  if (auth.isAuthenticated()) {
+    window.location.href = 'register.html';
+  } else {
+    auth.login();
   }
 }
