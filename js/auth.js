@@ -1,4 +1,5 @@
-// js/auth.js - Discord OAuth2 Authentication
+// js/auth.js - Discord OAuth2 Authentication (Browser)
+
 class AuthManager {
   constructor() {
     this.token = null;
@@ -106,8 +107,10 @@ class AuthManager {
   }
 }
 
+// ✅ สำคัญ: ประกาศ auth เป็น global variable
 const auth = new AuthManager();
 
+// ฟังก์ชันสำหรับเรียกจาก HTML
 function loginWithDiscord() {
   auth.login();
 }
