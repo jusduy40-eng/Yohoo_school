@@ -1,91 +1,287 @@
-// api/register.js
-import { createClient } from '@supabase/supabase-js';
+import { checkAuth, saveUserData } from './auth.js';
+import { API_CONFIG } from './config.js';
 
-export default async function handler(req, res) {
-  // 1. ตรวจสอบ Method
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
-  }
+// DOM Elements
+const loadingScreen = document.getElementById('loadingScreen');
+const authRequired = document.getElementById('authRequired');
+const registerContainer = document.getElementById('registerContainer');
+const loginBtn = document.getElementById('loginBtn');
+const registerForm = document.getElementById('registerForm');
+const nextBtn = document.getElementById('nextBtn');
+const prevBtn = document.getElementById('prevBtn');
+const submitBtn = document.getElementById('submitBtn');
+const backToHomeBtn = document.getElementById('backToHomeBtn');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const successMessage = document.getElementById('successMessage');
+const summaryContent = document.getElementById('summaryContent');
+const progressFill = document.getElementById('progressFill');
+const steps = document.querySelectorAll('.step');
+const formSteps = document.querySelectorAll('.form-step');
 
-  try {
-    // 2. ตรวจสอบ Environment Variables
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+// State
+let currentStep = 1;
+let userData = null;
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('❌ Missing Supabase env vars');
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Server configuration error: Missing Supabase credentials' 
-      });
+// Initialize
+document.addEventListener('DOMContentLoaded', async () => {
+    // จำลอง loading
+    setTimeout(() => {
+        loadingScreen.style.display = 'none';
+        
+        // ตรวจสอบ authentication
+        userData = checkAuth();
+        
+        if (!userData) {
+            authRequired.style.display = 'flex';
+            registerContainer.style.display = 'none';
+        } else {
+            authRequired.style.display = 'none';
+            registerContainer.style.display = 'block';
+            displayUserData();
+        }
+    }, 1500);
+});
+
+// แสดงข้อมูล user
+function displayUserData() {
+    if (userData) {
+        document.getElementById('userName').textContent = userData.username || userData.global_name || 'User';
+        document.getElementById('userDiscord').textContent = `#${userData.discriminator || '0000'}`;
+        
+        const avatarUrl = userData.avatar 
+            ? `https://cdn.discordapp.com/avatars/${userData.id}/${userData.avatar}.png`
+            : `https://cdn.discordapp.com/embed/avatars/${parseInt(userData.discriminator) % 5}.png`;
+        
+        document.getElementById('userAvatar').src = avatarUrl;
     }
+}
 
-    // 3. ดึงข้อมูลจาก Request
-    const { user_id, username, first_name, last_name, date_of_birth, gender } = req.body;
-
-    if (!user_id || !first_name || !last_name) {
-      return res.status(400).json({ success: false, error: 'กรอกข้อมูลไม่ครบ' });
-    }
-
-    // 4. เชื่อมต่อ Supabase
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // 5. บันทึกข้อมูล
-    const { error: dbError } = await supabase
-      .from('players')
-      .insert([{
-        discord_id: String(user_id),
-        discord_username: username || 'Unknown',
-        first_name: first_name.trim(),
-        last_name: last_name.trim(),
-        date_of_birth: date_of_birth,
-        gender: gender || 'other',
-        is_whitelisted: true,
-        status: 'approved'
-      }]);
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      if (dbError.code === '23505') {
-        return res.status(409).json({ success: false, error: 'บัญชีนี้ลงทะเบียนแล้ว' });
-      }
-      throw new Error(dbError.message);
-    }
-
-    // 6. ส่ง Webhook (ถ้ามี)
-    if (webhookUrl) {
-      try {
-        const genderLabels = { male: 'ชาย 👨', female: 'หญิง 👩', other: 'อื่นๆ 🧑' };
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: '✅ **ลงทะเบียนใหม่!**',
-            embeds: [{
-              title: '📝 ผู้เล่นใหม่',
-              color: 0x10B981,
-              fields: [
-                { name: '👤 ชื่อ', value: `${first_name} ${last_name}`, inline: true },
-                { name: '🎂 เกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
-                { name: '⚧ เพศ', value: genderLabels[gender] || 'ไม่ระบุ', inline: true },
-                { name: '💬 Discord', value: `<@${user_id}>`, inline: false }
-              ]
-            }]
-          })
-        });
-      } catch (webhookErr) {
-        console.warn('Webhook failed (non-critical):', webhookErr.message);
-      }
-    }
-
-    return res.status(200).json({ success: true, message: 'ลงทะเบียนสำเร็จ!' });
-
-  } catch (error) {
-    console.error('❌ API Error:', error.message, error.stack);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'เกิดข้อผิดพลาด: ' + error.message 
+// Event Listeners
+if (loginBtn) {
+    loginBtn.addEventListener('click', () => {
+        window.loginWithDiscord();
     });
-  }
+}
+
+if (nextBtn) {
+    nextBtn.addEventListener('click', () => {
+        if (validateStep1()) {
+            showStep(2);
+            updateSummary();
+        }
+    });
+}
+
+if (prevBtn) {
+    prevBtn.addEventListener('click', () => {
+        showStep(1);
+    });
+}
+
+if (backToHomeBtn) {
+    backToHomeBtn.addEventListener('click', () => {
+        window.location.href = 'index.html';
+    });
+}
+
+if (registerForm) {
+    registerForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await submitRegistration();
+    });
+}
+
+// ตรวจสอบความถูกต้องของ Step 1
+function validateStep1() {
+    let isValid = true;
+    
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const dateOfBirth = document.getElementById('dateOfBirth').value;
+    const gender = document.querySelector('input[name="gender"]:checked');
+    
+    // ตรวจสอบชื่อ
+    if (!firstName) {
+        showError('firstNameError', 'กรุณากรอกชื่อจริง');
+        isValid = false;
+    } else {
+        clearError('firstNameError');
+    }
+    
+    // ตรวจสอบนามสกุล
+    if (!lastName) {
+        showError('lastNameError', 'กรุณากรอกนามสกุล');
+        isValid = false;
+    } else {
+        clearError('lastNameError');
+    }
+    
+    // ตรวจสอบวันเกิด
+    if (!dateOfBirth) {
+        showError('dateOfBirthError', 'กรุณาเลือกวันเดือนปีเกิด');
+        isValid = false;
+    } else {
+        const age = calculateAge(dateOfBirth);
+        if (age < 10 || age > 100) {
+            showError('dateOfBirthError', 'อายุต้องอยู่ระหว่าง 10 - 100 ปี');
+            isValid = false;
+        } else {
+            clearError('dateOfBirthError');
+        }
+    }
+    
+    // ตรวจสอบเพศ
+    if (!gender) {
+        showError('genderError', 'กรุณาเลือกเพศ');
+        isValid = false;
+    } else {
+        clearError('genderError');
+    }
+    
+    return isValid;
+}
+
+// คำนวณอายุ
+function calculateAge(birthDate) {
+    const today = new Date();
+    const birth = new Date(birthDate);
+    let age = today.getFullYear() - birth.getFullYear();
+    const monthDiff = today.getMonth() - birth.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birth.getDate())) {
+        age--;
+    }
+    
+    return age;
+}
+
+// แสดง Step
+function showStep(step) {
+    currentStep = step;
+    
+    // อัปเดต progress bar
+    const progress = ((step - 1) / (formSteps.length - 1)) * 100;
+    progressFill.style.width = `${progress}%`;
+    
+    // อัปเดต step indicators
+    steps.forEach((s, index) => {
+        if (index + 1 <= step) {
+            s.classList.add('active');
+        } else {
+            s.classList.remove('active');
+        }
+    });
+    
+    // แสดง/ซ่อน form steps
+    formSteps.forEach((fs, index) => {
+        if (index + 1 === step) {
+            fs.classList.add('active');
+        } else {
+            fs.classList.remove('active');
+        }
+    });
+}
+
+// อัปเดตสรุปข้อมูล
+function updateSummary() {
+    const firstName = document.getElementById('firstName').value.trim();
+    const lastName = document.getElementById('lastName').value.trim();
+    const dateOfBirth = document.getElementById('dateOfBirth').value;
+    const gender = document.querySelector('input[name="gender"]:checked');
+    
+    const genderText = {
+        'male': 'ชาย',
+        'female': 'หญิง',
+        'other': 'อื่นๆ'
+    };
+    
+    const age = calculateAge(dateOfBirth);
+    
+    summaryContent.innerHTML = `
+        <div class="summary-item">
+            <span class="summary-label"><i class="fas fa-user"></i> ชื่อ-นามสกุล:</span>
+            <span class="summary-value">${firstName} ${lastName}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label"><i class="fas fa-cake-candles"></i> วันเกิด:</span>
+            <span class="summary-value">${formatDate(dateOfBirth)} (อายุ ${age} ปี)</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label"><i class="fas fa-venus-mars"></i> เพศ:</span>
+            <span class="summary-value">${genderText[gender.value]}</span>
+        </div>
+        <div class="summary-item">
+            <span class="summary-label"><i class="fab fa-discord"></i> Discord:</span>
+            <span class="summary-value">${userData?.username || 'User'}#${userData?.discriminator || '0000'}</span>
+        </div>
+    `;
+}
+
+// จัดรูปแบบวันที่
+function formatDate(dateString) {
+    const date = new Date(dateString);
+    const options = { year: 'numeric', month: 'long', day: 'numeric' };
+    return date.toLocaleDateString('th-TH', options);
+}
+
+// ส่งฟอร์ม
+async function submitRegistration() {
+    loadingOverlay.style.display = 'flex';
+    
+    const formData = {
+        discordId: userData.id,
+        username: userData.username,
+        discriminator: userData.discriminator,
+        firstName: document.getElementById('firstName').value.trim(),
+        lastName: document.getElementById('lastName').value.trim(),
+        dateOfBirth: document.getElementById('dateOfBirth').value,
+        gender: document.querySelector('input[name="gender"]:checked').value,
+        registeredAt: new Date().toISOString()
+    };
+    
+    try {
+        // ส่งข้อมูลไปยัง API
+        const response = await fetch(`${API_CONFIG.BASE_URL}/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('discord_token')}`
+            },
+            body: JSON.stringify(formData)
+        });
+        
+        if (response.ok) {
+            // สำเร็จ
+            registerForm.style.display = 'none';
+            successMessage.style.display = 'block';
+            
+            // ซ่อน progress bar
+            document.querySelector('.progress-container').style.display = 'none';
+        } else {
+            const error = await response.json();
+            alert('เกิดข้อผิดพลาด: ' + (error.message || 'ไม่สามารถลงทะเบียนได้'));
+        }
+    } catch (error) {
+        console.error('Registration error:', error);
+        alert('เกิดข้อผิดพลาดในการเชื่อมต่อ กรุณาลองใหม่อีกครั้ง');
+    } finally {
+        loadingOverlay.style.display = 'none';
+    }
+}
+
+// Helper functions
+function showError(elementId, message) {
+    const errorElement = document.getElementById(elementId);
+    if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.display = 'block';
+    }
+}
+
+function clearError(elementId) {
+    const errorElement = document.getElementById(elementId);
+    if (errorElement) {
+        errorElement.textContent = '';
+        errorElement.style.display = 'none';
+    }
 }
