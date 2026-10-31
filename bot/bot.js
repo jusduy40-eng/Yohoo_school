@@ -1,4 +1,4 @@
-// bot/bot.js - Discord Bot (รันแยกต่างหาก ถ้าต้องการ)
+// bot/bot.js - Discord Bot (Optional - รันแยกต่างหากถ้าต้องการ)
 require('dotenv').config();
 const { Client, GatewayIntentBits } = require('discord.js');
 const express = require('express');
