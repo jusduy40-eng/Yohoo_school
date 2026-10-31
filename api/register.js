@@ -1,62 +1,92 @@
-const express = require('express');
-const router = express.Router();
-const { REST, Routes } = require('discord.js');
+// api/register.js - Vercel Serverless Function
+import { createClient } from '@supabase/supabase-js';
 
-// Discord Bot Token และ Guild ID
-const DISCORD_TOKEN = process.env.DISCORD_TOKEN;
-const GUILD_ID = process.env.GUILD_ID;
-const MEMBER_ROLE_ID = process.env.MEMBER_ROLE_ID;
+export default async function handler(req, res) {
+  // อนุญาตเฉพาะ POST
+  if (req.method !== 'POST') {
+    return res.status(405).json({ success: false, error: 'Method not allowed' });
+  }
 
-// REST instance
-const rest = new REST({ version: '10' }).setToken(DISCORD_TOKEN);
+  try {
+    // ตรวจสอบ Environment Variables
+    const supabaseUrl = process.env.SUPABASE_URL;
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
 
-// Register endpoint
-router.post('/register', async (req, res) => {
-    try {
-        const { discordId, username, firstName, lastName, dateOfBirth, gender } = req.body;
-        
-        // ตรวจสอบว่ามี discordId หรือไม่
-        if (!discordId) {
-            return res.status(400).json({ message: 'Discord ID is required' });
-        }
-        
-        // เพิ่ม Member role ให้ user
-        try {
-            await rest.put(
-                Routes.guildMemberRole(GUILD_ID, discordId, MEMBER_ROLE_ID),
-                {}
-            );
-            
-            console.log(`Added Member role to ${username} (${discordId})`);
-        } catch (discordError) {
-            console.error('Failed to add Discord role:', discordError);
-            // ไม่ throw error เพราะอาจเป็นกรณีที่ user ยังไม่ join server
-        }
-        
-        // บันทึกข้อมูลลง database (ตัวอย่าง)
-        // await db.collection('registrations').insertOne({
-        //     discordId,
-        //     username,
-        //     firstName,
-        //     lastName,
-        //     dateOfBirth,
-        //     gender,
-        //     registeredAt: new Date()
-        // });
-        
-        res.json({ 
-            success: true, 
-            message: 'Registration successful',
-            data: { discordId, username }
-        });
-        
-    } catch (error) {
-        console.error('Registration error:', error);
-        res.status(500).json({ 
-            message: 'Internal server error',
-            error: error.message 
-        });
+    if (!supabaseUrl || !supabaseKey) {
+      console.error('Missing Supabase credentials');
+      return res.status(500).json({ 
+        success: false, 
+        error: 'Server configuration error' 
+      });
     }
-});
 
-module.exports = router;
+    // ดึงข้อมูลจาก Request
+    const { user_id, username, first_name, last_name, date_of_birth, gender } = req.body;
+
+    if (!user_id || !first_name || !last_name || !date_of_birth || !gender) {
+      return res.status(400).json({ success: false, error: 'กรอกข้อมูลไม่ครบถ้วน' });
+    }
+
+    // เชื่อมต่อ Supabase
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // บันทึกข้อมูล
+    const { error: dbError } = await supabase
+      .from('players')
+      .insert([{
+        discord_id: String(user_id),
+        discord_username: username || 'Unknown',
+        first_name: first_name.trim(),
+        last_name: last_name.trim(),
+        date_of_birth: date_of_birth,
+        gender: gender,
+        is_whitelisted: true,
+        status: 'approved'
+      }]);
+
+    if (dbError) {
+      console.error('Database error:', dbError);
+      if (dbError.code === '23505') {
+        return res.status(409).json({ success: false, error: 'บัญชีนี้ลงทะเบียนแล้ว' });
+      }
+      throw new Error(dbError.message);
+    }
+
+    // ส่ง Webhook
+    if (webhookUrl) {
+      try {
+        const genderLabels = { male: 'ชาย 👨', female: 'หญิง 👩', other: 'อื่นๆ 🧑' };
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            content: '✅ **ลงทะเบียนใหม่!**',
+            embeds: [{
+              title: '📝 ผู้เล่นใหม่',
+              color: 0x10B981,
+              fields: [
+                { name: '👤 ชื่อ', value: `${first_name} ${last_name}`, inline: true },
+                { name: '🎂 เกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
+                { name: '⚧ เพศ', value: genderLabels[gender] || 'ไม่ระบุ', inline: true },
+                { name: '💬 Discord', value: `<@${user_id}>`, inline: false }
+              ],
+              timestamp: new Date().toISOString()
+            }]
+          })
+        });
+      } catch (webhookErr) {
+        console.warn('Webhook failed (non-critical):', webhookErr.message);
+      }
+    }
+
+    return res.status(200).json({ success: true, message: 'ลงทะเบียนสำเร็จ!' });
+
+  } catch (error) {
+    console.error('❌ API Error:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'เกิดข้อผิดพลาด: ' + error.message 
+    });
+  }
+}
