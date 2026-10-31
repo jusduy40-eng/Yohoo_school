@@ -7,7 +7,6 @@ const CONFIG = {
   },
 
   api: {
-    // ใช้ Vercel API Route โดยตรง
     botApiUrl: window.location.origin,
     timeout: 15000
   },
