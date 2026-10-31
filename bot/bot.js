@@ -1,92 +1,40 @@
-// api/register.js - Vercel Serverless Function
-import { createClient } from '@supabase/supabase-js';
+// bot/bot.js - Discord Bot (รันแยกต่างหาก ถ้าต้องการ)
+require('dotenv').config();
+const { Client, GatewayIntentBits } = require('discord.js');
+const express = require('express');
+const cors = require('cors');
 
-export default async function handler(req, res) {
-  // อนุญาตเฉพาะ POST
-  if (req.method !== 'POST') {
-    return res.status(405).json({ success: false, error: 'Method not allowed' });
-  }
+const CONFIG = {
+  botToken: process.env.DISCORD_BOT_TOKEN,
+  clientId: process.env.DISCORD_CLIENT_ID,
+  guildId: process.env.DISCORD_GUILD_ID,
+  memberRoleId: process.env.DISCORD_MEMBER_ROLE_ID,
+  port: process.env.PORT || 3000
+};
 
-  try {
-    // ตรวจสอบ Environment Variables
-    const supabaseUrl = process.env.SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-    const webhookUrl = process.env.DISCORD_WEBHOOK_URL;
+const client = new Client({
+  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMembers]
+});
 
-    if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase credentials');
-      return res.status(500).json({ 
-        success: false, 
-        error: 'Server configuration error' 
-      });
-    }
+const app = express();
+app.use(cors());
+app.use(express.json());
 
-    // ดึงข้อมูลจาก Request
-    const { user_id, username, first_name, last_name, date_of_birth, gender } = req.body;
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', botReady: client.isReady() });
+});
 
-    if (!user_id || !first_name || !last_name || !date_of_birth || !gender) {
-      return res.status(400).json({ success: false, error: 'กรอกข้อมูลไม่ครบถ้วน' });
-    }
+client.once('ready', () => {
+  console.log(`✅ Bot: ${client.user.tag}`);
+});
 
-    // เชื่อมต่อ Supabase
-    const supabase = createClient(supabaseUrl, supabaseKey);
-
-    // บันทึกข้อมูล
-    const { error: dbError } = await supabase
-      .from('players')
-      .insert([{
-        discord_id: String(user_id),
-        discord_username: username || 'Unknown',
-        first_name: first_name.trim(),
-        last_name: last_name.trim(),
-        date_of_birth: date_of_birth,
-        gender: gender,
-        is_whitelisted: true,
-        status: 'approved'
-      }]);
-
-    if (dbError) {
-      console.error('Database error:', dbError);
-      if (dbError.code === '23505') {
-        return res.status(409).json({ success: false, error: 'บัญชีนี้ลงทะเบียนแล้ว' });
-      }
-      throw new Error(dbError.message);
-    }
-
-    // ส่ง Webhook
-    if (webhookUrl) {
-      try {
-        const genderLabels = { male: 'ชาย 👨', female: 'หญิง 👩', other: 'อื่นๆ 🧑' };
-        await fetch(webhookUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            content: '✅ **ลงทะเบียนใหม่!**',
-            embeds: [{
-              title: '📝 ผู้เล่นใหม่',
-              color: 0x10B981,
-              fields: [
-                { name: '👤 ชื่อ', value: `${first_name} ${last_name}`, inline: true },
-                { name: '🎂 เกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
-                { name: '⚧ เพศ', value: genderLabels[gender] || 'ไม่ระบุ', inline: true },
-                { name: '💬 Discord', value: `<@${user_id}>`, inline: false }
-              ],
-              timestamp: new Date().toISOString()
-            }]
-          })
-        });
-      } catch (webhookErr) {
-        console.warn('Webhook failed (non-critical):', webhookErr.message);
-      }
-    }
-
-    return res.status(200).json({ success: true, message: 'ลงทะเบียนสำเร็จ!' });
-
-  } catch (error) {
-    console.error('❌ API Error:', error.message);
-    return res.status(500).json({ 
-      success: false, 
-      error: 'เกิดข้อผิดพลาด: ' + error.message 
-    });
+async function start() {
+  app.listen(CONFIG.port, () => {
+    console.log(`🌐 API: http://localhost:${CONFIG.port}`);
+  });
+  if (CONFIG.botToken) {
+    await client.login(CONFIG.botToken);
   }
 }
+
+start();
