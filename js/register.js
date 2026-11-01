@@ -1,9 +1,9 @@
 /**
- * Yohoo School - Registration System
+ * Yohoo School - Registration System (2 Steps)
  */
 
 let currentStep = 1;
-const totalSteps = 3;
+const totalSteps = 2; // เปลี่ยนจาก 3 เป็น 2
 
 document.addEventListener('DOMContentLoaded', () => {
     initializeRegistration();
@@ -14,51 +14,65 @@ async function initializeRegistration() {
     const authRequired = document.getElementById('authRequired');
     const registerContainer = document.getElementById('registerContainer');
 
-    // Check authentication
-    const isAuthenticated = await auth.requireAuth();
+    try {
+        const isAuthenticated = await auth.requireAuth();
 
-    setTimeout(() => {
-        loadingScreen.classList.add('hidden');
         setTimeout(() => {
-            loadingScreen.style.display = 'none';
-        }, 500);
+            if (loadingScreen) {
+                loadingScreen.classList.add('hidden');
+                setTimeout(() => {
+                    loadingScreen.style.display = 'none';
+                }, 500);
+            }
 
-        if (!isAuthenticated) {
-            authRequired.style.display = 'flex';
-            registerContainer.style.display = 'none';
-        } else {
-            authRequired.style.display = 'none';
-            registerContainer.style.display = 'block';
-            loadUserInfo();
-            setupFormValidation();
+            if (!isAuthenticated) {
+                if (authRequired) authRequired.style.display = 'flex';
+                if (registerContainer) registerContainer.style.display = 'none';
+            } else {
+                if (authRequired) authRequired.style.display = 'none';
+                if (registerContainer) registerContainer.style.display = 'block';
+                loadUserInfo();
+                setupFormValidation();
+            }
+        }, 800);
+    } catch (error) {
+        console.error('Auth error:', error);
+        if (loadingScreen) {
+            loadingScreen.classList.add('hidden');
+            loadingScreen.style.display = 'none';
         }
-    }, 800);
+        if (authRequired) authRequired.style.display = 'flex';
+        if (registerContainer) registerContainer.style.display = 'none';
+    }
 }
 
 async function loadUserInfo() {
-    const user = await auth.getUser();
-    if (user) {
-        document.getElementById('userName').textContent = user.global_name || user.username;
-        document.getElementById('userDiscord').textContent = `${user.username}#${user.discriminator}`;
-        
-        const avatarUrl = user.avatar 
-            ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
-            : `https://cdn.discordapp.com/embed/avatars/${user.discriminator % 5}.png`;
-        
-        document.getElementById('userAvatar').src = avatarUrl;
+    try {
+        const user = await auth.getUser();
+        if (user) {
+            const userNameEl = document.getElementById('userName');
+            const userDiscordEl = document.getElementById('userDiscord');
+            const userAvatarEl = document.getElementById('userAvatar');
+            
+            if (userNameEl) userNameEl.textContent = user.global_name || user.username;
+            if (userDiscordEl) userDiscordEl.textContent = `${user.username}#${user.discriminator}`;
+            
+            const avatarUrl = user.avatar 
+                ? `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png?size=128`
+                : `https://cdn.discordapp.com/embed/avatars/${user.discriminator % 5}.png`;
+            
+            if (userAvatarEl) userAvatarEl.src = avatarUrl;
+        }
+    } catch (error) {
+        console.error('Load user info error:', error);
     }
 }
 
 function setupFormValidation() {
     const inputs = document.querySelectorAll('.form-input');
     inputs.forEach(input => {
-        input.addEventListener('input', () => {
-            clearInputError(input);
-        });
-
-        input.addEventListener('blur', () => {
-            validateInput(input);
-        });
+        input.addEventListener('input', () => clearInputError(input));
+        input.addEventListener('blur', () => validateInput(input));
     });
 
     // Date of birth validation
@@ -88,25 +102,9 @@ function validateInput(input) {
         return false;
     }
 
-    if (input.id === 'firstName' || input.id === 'lastName') {
-        if (value.length < CONFIG.validation.nameMinLength) {
-            showInputError(input, `ต้องมีความยาวอย่างน้อย ${CONFIG.validation.nameMinLength} ตัวอักษร`, errorElement);
-            return false;
-        }
-    }
-
-    if (input.id === 'steamHex') {
-        if (!/^steam:\d+$/.test(value)) {
-            showInputError(input, 'รูปแบบไม่ถูกต้อง (เช่น steam:110000123456789)', errorElement);
-            return false;
-        }
-    }
-
-    if (input.id === 'fivemLicense') {
-        if (!/^license:[a-zA-Z0-9]+$/.test(value)) {
-            showInputError(input, 'รูปแบบไม่ถูกต้อง (เช่น license:xxxxxxxx)', errorElement);
-            return false;
-        }
+    if ((input.id === 'firstName' || input.id === 'lastName') && value.length < CONFIG.validation.nameMinLength) {
+        showInputError(input, `ต้องมีความยาวอย่างน้อย ${CONFIG.validation.nameMinLength} ตัวอักษร`, errorElement);
+        return false;
     }
 
     clearInputError(input);
@@ -134,7 +132,7 @@ function nextStep(step) {
     currentStep = step;
     updateStepUI();
 
-    if (step === 3) {
+    if (step === 2) {
         updateSummary();
     }
 
@@ -149,6 +147,8 @@ function prevStep(step) {
 
 function validateCurrentStep() {
     const currentFormStep = document.querySelector(`.form-step[data-step="${currentStep}"]`);
+    if (!currentFormStep) return false;
+    
     const inputs = currentFormStep.querySelectorAll('.form-input[required]');
     let isValid = true;
 
@@ -202,180 +202,124 @@ function updateStepUI() {
 
     // Update progress fill
     const progressFill = document.getElementById('progressFill');
-    const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
-    progressFill.style.width = `${progressPercentage}%`;
+    if (progressFill) {
+        const progressPercentage = ((currentStep - 1) / (totalSteps - 1)) * 100;
+        progressFill.style.width = `${progressPercentage}%`;
+    }
 }
 
 function updateSummary() {
-    const firstName = document.getElementById('firstName').value;
-    const lastName = document.getElementById('lastName').value;
-    const dob = document.getElementById('dateOfBirth').value;
-    const gender = document.querySelector('input[name="gender"]:checked')?.value;
-    const steamHex = document.getElementById('steamHex').value;
-    const fivemLicense = document.getElementById('fivemLicense').value;
+    const firstNameEl = document.getElementById('firstName');
+    const lastNameEl = document.getElementById('lastName');
+    const dobEl = document.getElementById('dateOfBirth');
+    const genderEl = document.querySelector('input[name="gender"]:checked');
+
+    if (!firstNameEl || !lastNameEl || !dobEl) {
+        console.error('Form elements not found');
+        return;
+    }
 
     const genderLabels = {
-        male: 'ชาย',
-        female: 'หญิง',
-        other: 'อื่นๆ'
+        male: 'ชาย 👨',
+        female: 'หญิง 👩',
+        other: 'อื่นๆ 🧑'
     };
 
-    const formattedDob = dob ? new Date(dob).toLocaleDateString('th-TH', {
+    const formattedDob = dobEl.value ? new Date(dobEl.value).toLocaleDateString('th-TH', {
         year: 'numeric',
         month: 'long',
         day: 'numeric'
     }) : '-';
 
     const summaryContent = document.getElementById('summaryContent');
-    summaryContent.innerHTML = `
-        <div class="summary-item">
-            <span class="summary-label">ชื่อ-นามสกุล</span>
-            <span class="summary-value">${firstName} ${lastName}</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-label">วันเดือนปีเกิด</span>
-            <span class="summary-value">${formattedDob}</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-label">เพศ</span>
-            <span class="summary-value">${genderLabels[gender] || '-'}</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-label">Steam ID</span>
-            <span class="summary-value">${steamHex}</span>
-        </div>
-        <div class="summary-item">
-            <span class="summary-label">FiveM License</span>
-            <span class="summary-value">${fivemLicense}</span>
-        </div>
-    `;
+    if (summaryContent) {
+        summaryContent.innerHTML = `
+            <div class="summary-item">
+                <span class="summary-label">ชื่อ-นามสกุล</span>
+                <span class="summary-value">${firstNameEl.value} ${lastNameEl.value}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">วันเดือนปีเกิด</span>
+                <span class="summary-value">${formattedDob}</span>
+            </div>
+            <div class="summary-item">
+                <span class="summary-label">เพศ</span>
+                <span class="summary-value">${genderLabels[genderEl?.value] || '-'}</span>
+            </div>
+        `;
+    }
 }
 
 async function handleSubmit(e) {
     e.preventDefault();
 
     const loadingOverlay = document.getElementById('loadingOverlay');
-    loadingOverlay.style.display = 'flex';
-
-    const user = await auth.getUser();
-    const formData = {
-        discord_id: user ? `${user.username}#${user.discriminator}` : '',
-        discord_user_id: user ? user.id : '',
-        username: user ? user.username : '',
-        first_name: document.getElementById('firstName').value.trim(),
-        last_name: document.getElementById('lastName').value.trim(),
-        date_of_birth: document.getElementById('dateOfBirth').value,
-        gender: document.querySelector('input[name="gender"]:checked')?.value,
-        steam_hex: document.getElementById('steamHex').value.trim(),
-        fivem_license: document.getElementById('fivemLicense').value.trim(),
-        registered_at: new Date().toISOString()
-    };
+    if (loadingOverlay) loadingOverlay.style.display = 'flex';
 
     try {
-        // Send to Discord Webhook
-        await sendToWebhook(formData);
+        const user = await auth.getUser();
+        if (!user) {
+            throw new Error('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบใหม่');
+        }
 
-        // Try to assign Discord role (optional, may fail if bot not running)
-        try {
-            await assignDiscordRole(user.id);
-        } catch (roleError) {
-            console.warn('Role assignment failed:', roleError);
+        const firstNameEl = document.getElementById('firstName');
+        const lastNameEl = document.getElementById('lastName');
+        const dobEl = document.getElementById('dateOfBirth');
+        const genderEl = document.querySelector('input[name="gender"]:checked');
+
+        if (!firstNameEl || !lastNameEl || !dobEl || !genderEl) {
+            throw new Error('ไม่พบฟอร์มข้อมูล กรุณารีเฟรชหน้าเว็บ');
+        }
+
+        const formData = {
+            user_id: user.id,
+            username: user.username,
+            first_name: firstNameEl.value.trim(),
+            last_name: lastNameEl.value.trim(),
+            date_of_birth: dobEl.value,
+            gender: genderEl.value
+        };
+
+        console.log('Sending to:', `${CONFIG.api.botApiUrl}/api/register`);
+        console.log('Data:', formData);
+
+        const response = await fetch(`${CONFIG.api.botApiUrl}/api/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(formData)
+        });
+
+        const contentType = response.headers.get('content-type');
+        let result;
+        
+        if (contentType && contentType.includes('application/json')) {
+            result = await response.json();
+        } else {
+            const text = await response.text();
+            console.error('Non-JSON response:', text);
+            throw new Error('Server ตอบกลับไม่เป็น JSON');
+        }
+
+        if (!response.ok || !result.success) {
+            throw new Error(result.error || CONFIG.messages.error.server);
         }
 
         // Show success
-        document.getElementById('registerForm').style.display = 'none';
-        document.querySelector('.progress-container').style.display = 'none';
-        document.querySelector('.form-header').style.display = 'none';
-        document.getElementById('successMessage').style.display = 'block';
+        const form = document.getElementById('registerForm');
+        const progressContainer = document.querySelector('.progress-container');
+        const formHeader = document.querySelector('.form-header');
+        const successMessage = document.getElementById('successMessage');
+
+        if (form) form.style.display = 'none';
+        if (progressContainer) progressContainer.style.display = 'none';
+        if (formHeader) formHeader.style.display = 'none';
+        if (successMessage) successMessage.style.display = 'block';
 
     } catch (error) {
         console.error('Registration error:', error);
-        alert('เกิดข้อผิดพลาดในการลงทะเบียน กรุณาลองใหม่อีกครั้ง');
+        alert(`❌ เกิดข้อผิดพลาด: ${error.message}`);
     } finally {
-        loadingOverlay.style.display = 'none';
+        const loadingOverlay = document.getElementById('loadingOverlay');
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
     }
-}
-
-async function sendToWebhook(data) {
-    const genderLabels = {
-        male: 'ชาย',
-        female: 'หญิง',
-        other: 'อื่นๆ'
-    };
-
-    const embed = {
-        title: ' มีการลงทะเบียนใหม่',
-        color: 0x10B981,
-        timestamp: new Date().toISOString(),
-        fields: [
-            {
-                name: 'ชื่อ-นามสกุล',
-                value: `${data.first_name} ${data.last_name}`,
-                inline: true
-            },
-            {
-                name: 'วันเดือนปีเกิด',
-                value: new Date(data.date_of_birth).toLocaleDateString('th-TH'),
-                inline: true
-            },
-            {
-                name: 'เพศ',
-                value: genderLabels[data.gender] || '-',
-                inline: true
-            },
-            {
-                name: 'Discord',
-                value: data.discord_id,
-                inline: false
-            },
-            {
-                name: 'Steam ID',
-                value: data.steam_hex,
-                inline: true
-            },
-            {
-                name: 'FiveM License',
-                value: data.fivem_license,
-                inline: true
-            }
-        ],
-        footer: {
-            text: 'Yohoo School Registration System'
-        }
-    };
-
-    const response = await fetch(CONFIG.discord.webhookUrl, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            content: '✅ **ลงทะเบียนสำเร็จ!**',
-            embeds: [embed]
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error('Webhook request failed');
-    }
-}
-
-async function assignDiscordRole(userId) {
-    const response = await fetch(`${CONFIG.api.baseUrl}:3000/give-role`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-            user_id: userId,
-            role_id: CONFIG.discord.memberRoleId,
-            guild_id: CONFIG.discord.guildId
-        })
-    });
-
-    if (!response.ok) {
-        throw new Error('Role assignment failed');
-    }
-
-    return response.json();
 }
