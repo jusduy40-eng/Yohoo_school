@@ -5,17 +5,18 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  // รับข้อมูลจาก Frontend (ตรงกับที่เว็บส่งมาจริง)
   const { user_id, username, first_name, last_name, date_of_birth, gender, height } = req.body;
-
-  // ✅ แปลง user_id → identifier format ที่ FiveM ใช้ (discord:xxxxxxxxx)
+  
+  // แปลงเป็น format ที่ FiveM ใช้
   const identifier = user_id ? `discord:${user_id}` : null;
+
+  // 🔍 DEBUG: ดูว่าค่าที่รับมาคืออะไร (เช็คใน Vercel Logs)
+  console.log('📝 Register attempt for identifier:', identifier);
 
   if (!identifier || !first_name || !last_name || !date_of_birth || !gender) {
     return res.status(400).json({ success: false, error: 'กรอกข้อมูลไม่ครบ' });
   }
 
-  // ตรวจสอบ Environment Variables
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
     console.error('❌ Missing Supabase Environment Variables');
     return res.status(500).json({ success: false, error: 'Server configuration error' });
@@ -24,30 +25,33 @@ export default async function handler(req, res) {
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   try {
-    // 1. ตรวจสอบว่ามี identifier นี้ในระบบหรือยัง
+    // 1. ตรวจสอบว่ามี identifier นี้ในระบบหรือยัง (ใช้ maybeSingle ป้องกัน error ถ้าไม่เจอข้อมูล)
     const { data: existingUser, error: checkError } = await supabase
       .from('users')
       .select('identifier')
       .eq('identifier', identifier)
-      .single();
+      .maybeSingle();
 
-    if (checkError && checkError.code !== 'PGRST116') {
+    if (checkError) {
+      console.error('❌ Check Error:', checkError);
       throw new Error(checkError.message);
     }
 
+    // 2. ถ้าเจอข้อมูลแล้ว ให้ตีกลับทันที
     if (existingUser) {
+      console.log('⚠️ User already exists:', identifier);
       return res.status(409).json({ success: false, error: 'บัญชีนี้ลงทะเบียนตัวละครไปแล้ว' });
     }
 
-    // 2. แปลงเพศให้เป็น 'm' หรือ 'f' ตามที่ ESX ต้องการ
+    // 3. แปลงค่าให้ตรงกับ ESX
     const sexValue = gender === 'male' ? 'm' : (gender === 'female' ? 'f' : 'u');
     const heightValue = height ? parseInt(height) : 170;
 
-    // 3. INSERT ลงตาราง users
+    // 4. INSERT ลงตาราง users
     const { error: dbError } = await supabase
       .from('users')
       .insert([{
-        identifier: identifier,       // เช่น 'discord:1346389669297782845'
+        identifier: identifier,
         firstname: first_name,
         lastname: last_name,
         dateofbirth: date_of_birth,
@@ -60,17 +64,16 @@ export default async function handler(req, res) {
       }]);
 
     if (dbError) {
-      console.error('❌ Database Error:', dbError);
-      if (dbError.code === '23505') {
+      console.error('❌ Database Insert Error:', dbError);
+      if (dbError.code === '23505') { // Unique violation
         return res.status(409).json({ success: false, error: 'บัญชีนี้ลงทะเบียนแล้ว' });
       }
       throw new Error(dbError.message);
     }
 
-    // 4. ส่งแจ้งเตือน Discord
+    // 5. Discord Webhook
     if (process.env.DISCORD_WEBHOOK_URL) {
       const genderLabels = { male: 'ชาย 👨', female: 'หญิง 👩', other: 'อื่นๆ 🧑' };
-      
       await fetch(process.env.DISCORD_WEBHOOK_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -83,8 +86,7 @@ export default async function handler(req, res) {
               { name: '👤 ชื่อ-นามสกุล', value: `${first_name} ${last_name}`, inline: true },
               { name: '🎂 วันเกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
               { name: '⚧ เพศ', value: genderLabels[gender] || 'ไม่ระบุ', inline: true },
-              { name: '🔑 Identifier', value: `\`${identifier}\``, inline: false },
-              { name: '💬 Discord', value: username ? `<@${user_id}>` : 'ไม่ระบุ', inline: false }
+              { name: '🔑 Identifier', value: `\`${identifier}\``, inline: false }
             ]
           }]
         })
