@@ -1,11 +1,14 @@
 /**
- * Yohoo School - Profile Manager
- * ดึงข้อมูลตัวละคร + ระบบขอเปลี่ยนชื่อ (รอแอดมินอนุมัติ)
+ * Yohoo School - Profile Manager (Optimized Real-time Version)
+ * ดึงข้อมูลตัวละคร + ระบบขอเปลี่ยนชื่อ + อัปเดตเงินอัตโนมัติแบบไม่แลค
  */
 
 const ProfileManager = {
     currentData: null,
     currentUser: null,
+    refreshInterval: null,
+    lastMoney: 0,
+    lastBank: 0,
 
     async init() {
         const isAuth = await auth.requireAuth();
@@ -20,6 +23,7 @@ const ProfileManager = {
             if (btnLogin) btnLogin.style.display = 'inline-flex';
             if (btnLogout) btnLogout.style.display = 'none';
             if (profileSection) profileSection.style.display = 'none';
+            this.stopAutoRefresh();
             return;
         }
 
@@ -32,7 +36,9 @@ const ProfileManager = {
         if (!user || !user.id) return;
         this.currentUser = user;
 
-        this.loadProfileData(user);
+        await this.loadProfileData(user);
+        this.startAutoRefresh(); // ✅ เริ่มระบบอัปเดตอัตโนมัติ
+        this.setupVisibilityListener(); // ✅ เริ่มระบบพักการทำงานเมื่อสลับแท็บ
     },
 
     async loadProfileData(user) {
@@ -94,23 +100,26 @@ const ProfileManager = {
         const genderMap = { 'm': 'ชาย 👨', 'f': 'หญิง 👩', 'u': 'ไม่ระบุ 🧑' };
         document.getElementById('profileGender').textContent = genderMap[data.sex] || data.sex;
 
-        // ส่วนสูง / อาชีพ / เงิน
+        // ส่วนสูง / อาชีพ
         document.getElementById('profileHeight').textContent = data.height ? `${data.height} ซม.` : '-';
-
         const jobMap = {
             'unemployed': 'ว่างงาน', 'student': 'นักเรียน', 'police': 'ตำรวจ',
             'ambulance': 'แพทย์', 'mechanic': 'ช่างยนต์'
         };
         document.getElementById('profileJob').textContent = jobMap[data.job] || data.job || 'ว่างงาน';
-        document.getElementById('profileMoney').textContent = `$${Number(data.money || 0).toLocaleString()}`;
-        document.getElementById('profileBank').textContent = `$${Number(data.bank || 0).toLocaleString()}`;
+
+        // ✅ บันทึกค่าเริ่มต้นเพื่อใช้เปรียบเทียบตอนอัปเดต
+        this.lastMoney = Number(data.money || 0);
+        this.lastBank = Number(data.bank || 0);
+        
+        document.getElementById('profileMoney').textContent = `$${this.lastMoney.toLocaleString()}`;
+        document.getElementById('profileBank').textContent = `$${this.lastBank.toLocaleString()}`;
 
         // ===== จัดการสถานะ "รออนุมัติเปลี่ยนชื่อ" =====
         const pendingAlert = document.getElementById('profilePendingAlert');
         const btnChange = document.getElementById('btnRequestNameChange');
 
         if (data.name_change_pending) {
-            // มีคำขอค้างอยู่ → แสดงข้อความเตือน + ปิดปุ่มขอเปลี่ยน
             pendingAlert.style.display = 'flex';
             pendingAlert.querySelector('span').textContent =
                 `🟡 กำลังรอแอดมินอนุมัติเปลี่ยนชื่อเป็น: ${data.pending_firstname || ''} ${data.pending_lastname || ''}`;
@@ -119,6 +128,102 @@ const ProfileManager = {
             pendingAlert.style.display = 'none';
             btnChange.style.display = 'inline-flex';
         }
+    },
+
+    // ==========================================
+    // ⚡ ระบบอัปเดตเงินอัตโนมัติแบบ Smart (ไม่แลค)
+    // ==========================================
+    startAutoRefresh() {
+        this.stopAutoRefresh(); // ป้องกันการซ้อนทับ
+        
+        // อัปเดตทุก 10 วินาที (สมดุลที่สุด: รู้สึกว่า Real-time + เซิร์ฟเวอร์รับได้สบาย)
+        this.refreshInterval = setInterval(async () => {
+            if (!this.currentUser || document.hidden) return; // ✅ หยุดทำงานทันทีถ้าผู้ใช้สลับแท็บไปเล่นเกมหรือดูอย่างอื่น
+
+            try {
+                const response = await fetch(`/api/profile?user_id=${encodeURIComponent(this.currentUser.id)}`);
+                const result = await response.json();
+
+                if (result.success && result.data) {
+                    const newData = result.data;
+                    let hasChanged = false;
+
+                    // เช็คเงินติดตัว
+                    const newMoney = Number(newData.money || 0);
+                    if (newMoney !== this.lastMoney) {
+                        this.lastMoney = newMoney;
+                        this.animateValue('profileMoney', newMoney);
+                        hasChanged = true;
+                    }
+
+                    // เช็คเงินธนาคาร
+                    const newBank = Number(newData.bank || 0);
+                    if (newBank !== this.lastBank) {
+                        this.lastBank = newBank;
+                        this.animateValue('profileBank', newBank);
+                        hasChanged = true;
+                    }
+
+                    if (hasChanged) {
+                        console.log('💰 [Auto-Sync] เงินอัปเดตเรียบร้อย!');
+                    }
+                }
+            } catch (error) {
+                // ไม่ต้อง log error บ่อยๆ เพื่อป้องกัน console เต็ม
+            }
+        }, 10000); // 10,000 ms = 10 วินาที
+    },
+
+    stopAutoRefresh() {
+        if (this.refreshInterval) {
+            clearInterval(this.refreshInterval);
+            this.refreshInterval = null;
+        }
+    },
+
+    // ✅ ฟังก์ชันพักการทำงานเมื่อผู้ใช้ไม่ได้อยู่ที่แท็บนี้ (ประหยัดทรัพยากร 100%)
+    setupVisibilityListener() {
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                this.stopAutoRefresh();
+            } else if (this.currentUser) {
+                this.startAutoRefresh();
+                this.loadProfileData(this.currentUser); // โหลดข้อมูลล่าสุดทันทีที่กลับมา
+            }
+        });
+    },
+
+    // ✅ ฟังก์ชันทำให้ตัวเลขวิ่ง (Animation) ดูสมูทและโปร
+    animateValue(elementId, endValue) {
+        const element = document.getElementById(elementId);
+        if (!element) return;
+
+        const startValue = parseInt(element.innerText.replace(/[^0-9]/g, '')) || 0;
+        if (startValue === endValue) return;
+
+        const duration = 800; // ความเร็วในการวิ่ง (ms)
+        const startTime = performance.now();
+
+        const animate = (currentTime) => {
+            const elapsed = currentTime - startTime;
+            const progress = Math.min(elapsed / duration, 1);
+            
+            // Easing function (easeOutQuad) เพื่อให้ตัวเลขวิ่งเร็วตอนแรกแล้วค่อยๆ ช้าลง
+            const easeProgress = 1 - (1 - progress) * (1 - progress);
+            const currentVal = Math.floor(startValue + (endValue - startValue) * easeProgress);
+
+            element.textContent = `$${currentVal.toLocaleString()}`;
+
+            if (progress < 1) {
+                requestAnimationFrame(animate); // ใช้ requestAnimationFrame แทน setInterval เพื่อความลื่นไหลสูงสุด
+            } else {
+                element.textContent = `$${endValue.toLocaleString()}`;
+                // Effect กระพริบสีเขียวเล็กน้อยเพื่อบอกว่าเงินเปลี่ยน
+                element.style.color = '#4ade80'; 
+                setTimeout(() => { element.style.color = ''; }, 1000);
+            }
+        };
+        requestAnimationFrame(animate);
     },
 
     // ================= ระบบขอเปลี่ยนชื่อ =================
@@ -139,11 +244,8 @@ const ProfileManager = {
         const last = document.getElementById('newLastName').value.trim();
         const errEl = document.getElementById('modalError');
 
-        // Validation
         errEl.style.display = 'none';
-        if (!first || !last) {
-            return this._showModalError('กรุณากรอกชื่อและนามสกุลใหม่ให้ครบ');
-        }
+        if (!first || !last) return this._showModalError('กรุณากรอกชื่อและนามสกุลใหม่ให้ครบ');
         if (first.length < 2 || first.length > 25 || last.length < 2 || last.length > 25) {
             return this._showModalError('ชื่อ/นามสกุล ต้องยาว 2-25 ตัวอักษร');
         }
@@ -172,7 +274,7 @@ const ProfileManager = {
             if (result.success) {
                 this.closeModal();
                 alert('✅ ส่งคำขอเปลี่ยนชื่อเรียบร้อยแล้ว! รอทีมงานอนุมัติ');
-                this.loadProfileData(this.currentUser); // โหลดใหม่เพื่อแสดงสถานะ pending
+                this.loadProfileData(this.currentUser);
             } else {
                 this._showModalError(result.error || 'ส่งคำขอไม่สำเร็จ');
             }
@@ -198,7 +300,10 @@ window.loadProfile = () => {
 window.openNameChangeModal = () => ProfileManager.openModal();
 window.closeNameChangeModal = () => ProfileManager.closeModal();
 window.submitNameChange = () => ProfileManager.submitNameChange();
-window.handleLogoutClick = () => auth.logout();
+window.handleLogoutClick = () => {
+    ProfileManager.stopAutoRefresh(); // หยุดก่อน logout
+    auth.logout();
+};
 
 document.addEventListener('DOMContentLoaded', () => {
     ProfileManager.init();
