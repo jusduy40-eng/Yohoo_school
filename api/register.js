@@ -5,8 +5,11 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  // รับข้อมูลจาก Frontend (ต้องแน่ใจว่า frontend ส่ง identifier ที่ถูกต้อง เช่น 'discord:123456789' หรือ 'steam:xxx')
-  const { identifier, username, first_name, last_name, date_of_birth, gender, height } = req.body;
+  // รับข้อมูลจาก Frontend (ตรงกับที่เว็บส่งมาจริง)
+  const { user_id, username, first_name, last_name, date_of_birth, gender, height } = req.body;
+
+  // ✅ แปลง user_id → identifier format ที่ FiveM ใช้ (discord:xxxxxxxxx)
+  const identifier = user_id ? `discord:${user_id}` : null;
 
   if (!identifier || !first_name || !last_name || !date_of_birth || !gender) {
     return res.status(400).json({ success: false, error: 'กรอกข้อมูลไม่ครบ' });
@@ -28,7 +31,7 @@ export default async function handler(req, res) {
       .eq('identifier', identifier)
       .single();
 
-    if (checkError && checkError.code !== 'PGRST116') { // PGRST116 = Not found (ซึ่งคือเรื่องดี เราจะได้สร้างใหม่)
+    if (checkError && checkError.code !== 'PGRST116') {
       throw new Error(checkError.message);
     }
 
@@ -38,20 +41,20 @@ export default async function handler(req, res) {
 
     // 2. แปลงเพศให้เป็น 'm' หรือ 'f' ตามที่ ESX ต้องการ
     const sexValue = gender === 'male' ? 'm' : (gender === 'female' ? 'f' : 'u');
-    const heightValue = height ? parseInt(height) : 170; // ค่าเริ่มต้นถ้าไม่ส่งมา
+    const heightValue = height ? parseInt(height) : 170;
 
-    // 3. INSERT ลงตาราง users (โครงสร้างมาตรฐานของ ESX)
+    // 3. INSERT ลงตาราง users
     const { error: dbError } = await supabase
       .from('users')
       .insert([{
-        identifier: identifier,       // ต้องเป็น format ที่ FiveM ใช้ เช่น 'discord:123456789'
+        identifier: identifier,       // เช่น 'discord:1346389669297782845'
         firstname: first_name,
         lastname: last_name,
-        dateofbirth: date_of_birth,   // format: 'YYYY-MM-DD'
+        dateofbirth: date_of_birth,
         sex: sexValue,
         height: heightValue,
-        money: 1500,                  // เงินติดตัวเริ่มต้น (ปรับตามเซิร์ฟเวอร์คุณ)
-        bank: 5000,                   // เงินในธนาคารเริ่มต้น
+        money: 1500,
+        bank: 5000,
         permission_level: 0,
         group: 'user'
       }]);
@@ -64,7 +67,7 @@ export default async function handler(req, res) {
       throw new Error(dbError.message);
     }
 
-    // 4. ส่งแจ้งเตือน Discord (Optional)
+    // 4. ส่งแจ้งเตือน Discord
     if (process.env.DISCORD_WEBHOOK_URL) {
       const genderLabels = { male: 'ชาย 👨', female: 'หญิง 👩', other: 'อื่นๆ 🧑' };
       
@@ -81,7 +84,7 @@ export default async function handler(req, res) {
               { name: '🎂 วันเกิด', value: new Date(date_of_birth).toLocaleDateString('th-TH'), inline: true },
               { name: '⚧ เพศ', value: genderLabels[gender] || 'ไม่ระบุ', inline: true },
               { name: '🔑 Identifier', value: `\`${identifier}\``, inline: false },
-              { name: '💬 Discord', value: username ? `<@${username}>` : 'ไม่ระบุ', inline: false }
+              { name: '💬 Discord', value: username ? `<@${user_id}>` : 'ไม่ระบุ', inline: false }
             ]
           }]
         })
