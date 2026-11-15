@@ -38,10 +38,18 @@
         <li><a href="#home" class="nav-link active">หน้าแรก</a></li>
         <li><a href="#features" class="nav-link">คุณสมบัติ</a></li>
         <li><a href="#about" class="nav-link">เกี่ยวกับ</a></li>
+        <!-- ลิงก์นี้จะถูกแสดงเมื่อล็อกอินแล้วผ่าน JavaScript -->
+        <li id="navProfile" style="display: none;">
+          <a href="#profileSection" class="nav-link">ตัวละคร</a>
+        </li>
         <li>
-          <button class="btn-login" onclick="handleLoginClick()">
+          <button class="btn-login" id="btnLoginNav" onclick="handleLoginClick()">
             <i class="fab fa-discord"></i>
             <span>เข้าสู่ระบบ</span>
+          </button>
+          <button class="btn-logout" id="btnLogoutNav" style="display: none;" onclick="handleLogoutClick()">
+            <i class="fas fa-sign-out-alt"></i>
+            <span>ออกจากระบบ</span>
           </button>
         </li>
       </ul>
@@ -119,6 +127,106 @@
               <div class="feature-icon info"><i class="fas fa-bolt"></i></div>
               <span>เซิร์ฟเวอร์เสถียร ลากน้อย</span>
             </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Character Profile Section (แสดงเมื่อล็อกอินแล้ว) -->
+  <section class="profile-section" id="profileSection" style="display: none;">
+    <div class="section-header">
+      <div class="section-badge">
+        <i class="fas fa-id-card"></i>
+        <span>MY CHARACTER</span>
+      </div>
+      <h2 class="section-title">ตัวละครของฉัน</h2>
+      <p class="section-description">ข้อมูลตัวละครของคุณในเซิร์ฟเวอร์ Yohoo School</p>
+    </div>
+
+    <div class="profile-container">
+      <!-- สถานะ: กำลังโหลด -->
+      <div class="profile-card profile-loading" id="profileLoading" style="display: none;">
+        <div class="spinner"></div>
+        <p>กำลังโหลดข้อมูลตัวละคร...</p>
+      </div>
+
+      <!-- สถานะ: ยังไม่ได้ลงทะเบียน -->
+      <div class="profile-card profile-empty" id="profileEmpty" style="display: none;">
+        <div class="profile-empty-icon">
+          <i class="fas fa-user-plus"></i>
+        </div>
+        <h3>ยังไม่มีตัวละคร</h3>
+        <p>คุณยังไม่ได้ลงทะเบียนตัวละครในเซิร์ฟเวอร์ กรุณาดำเนินการลงทะเบียนเพื่อเริ่มเล่น</p>
+        <a href="register.html" class="btn-primary">
+          <i class="fas fa-pen"></i>
+          <span>ลงทะเบียนตัวละคร</span>
+        </a>
+      </div>
+
+      <!-- สถานะ: มีตัวละครแล้ว -->
+      <div class="profile-card profile-filled" id="profileFilled" style="display: none;">
+        <div class="profile-avatar">
+          <img id="profileAvatar" src="https://i.pravatar.cc/150?img=1" alt="Avatar">
+        </div>
+        <div class="profile-info">
+          <h3 class="profile-name" id="profileName">-</h3>
+          <p class="profile-identifier" id="profileIdentifier">ID: -</p>
+          
+          <div class="profile-details">
+            <div class="detail-item">
+              <i class="fas fa-calendar"></i>
+              <div>
+                <span class="detail-label">วันเกิด</span>
+                <span class="detail-value" id="profileDob">-</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <i class="fas fa-venus-mars"></i>
+              <div>
+                <span class="detail-label">เพศ</span>
+                <span class="detail-value" id="profileGender">-</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <i class="fas fa-ruler-vertical"></i>
+              <div>
+                <span class="detail-label">ส่วนสูง</span>
+                <span class="detail-value" id="profileHeight">-</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <i class="fas fa-briefcase"></i>
+              <div>
+                <span class="detail-label">อาชีพ</span>
+                <span class="detail-value" id="profileJob">-</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <i class="fas fa-coins"></i>
+              <div>
+                <span class="detail-label">เงินติดตัว</span>
+                <span class="detail-value" id="profileMoney">-</span>
+              </div>
+            </div>
+            <div class="detail-item">
+              <i class="fas fa-university"></i>
+              <div>
+                <span class="detail-label">เงินธนาคาร</span>
+                <span class="detail-value" id="profileBank">-</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="profile-actions">
+            <button class="btn-secondary" onclick="loadProfile()">
+              <i class="fas fa-sync-alt"></i>
+              <span>รีเฟรชข้อมูล</span>
+            </button>
+            <button class="btn-danger" onclick="deleteCharacter()">
+              <i class="fas fa-trash-alt"></i>
+              <span>ลบลักษณะ</span>
+            </button>
           </div>
         </div>
       </div>
@@ -235,8 +343,10 @@
     </div>
   </footer>
 
+  <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/profile.js"></script> <!-- เพิ่มไฟล์จัดการโปรไฟล์ -->
   <script src="js/main.js"></script>
 </body>
 </html>
