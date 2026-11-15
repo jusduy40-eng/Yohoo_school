@@ -1,12 +1,13 @@
 /**
  * Yohoo School - Authentication System
- * Discord OAuth2 Integration
+ * Discord OAuth2 Integration + Auto-routing ตามสถานะตัวละคร
  */
 
 class AuthManager {
     constructor() {
         this.token = null;
         this.user = null;
+        this.hasCharacter = null; // null = ยังไม่เช็ค, true/false = เช็คแล้ว
         this.init();
     }
 
@@ -43,7 +44,7 @@ class AuthManager {
         try {
             const data = JSON.parse(authData);
             const expiresAt = data.timestamp + (data.expiresIn * 1000);
-            
+
             if (Date.now() > expiresAt) {
                 this.clearAuth();
                 return null;
@@ -64,9 +65,7 @@ class AuthManager {
 
         try {
             const response = await fetch('https://discord.com/api/users/@me', {
-                headers: {
-                    'Authorization': `Bearer ${token}`
-                }
+                headers: { 'Authorization': `Bearer ${token}` }
             });
 
             if (!response.ok) {
@@ -99,6 +98,7 @@ class AuthManager {
 
     logout() {
         this.clearAuth();
+        // กลับ index.html แบบ clean (ไม่ต้อง login ใหม่ถ้า token ยังไม่หมด)
         window.location.href = 'index.html';
     }
 
@@ -106,6 +106,7 @@ class AuthManager {
         localStorage.removeItem('discord_auth');
         this.token = null;
         this.user = null;
+        this.hasCharacter = null;
     }
 
     isAuthenticated() {
@@ -116,28 +117,110 @@ class AuthManager {
         if (!this.isAuthenticated()) {
             return false;
         }
-
         const user = await this.getUser();
         return !!user;
+    }
+
+    // ============================================
+    // 🆕 ฟังก์ชันใหม่: เช็คสถานะตัวละครจาก Supabase
+    // ============================================
+    async checkCharacter() {
+        // ถ้าเช็คแล้ว ใช้ cache ได้ (แต่ถ้าอยากได้สดๆ ให้ข้าม cache)
+        if (this.hasCharacter !== null) return this.hasCharacter;
+
+        const user = await this.getUser();
+        if (!user || !user.id) {
+            this.hasCharacter = false;
+            return false;
+        }
+
+        try {
+            const res = await fetch(`/api/profile?user_id=${encodeURIComponent(user.id)}`);
+            // 200 = มีตัวละคร, 404 = ยังไม่มี
+            this.hasCharacter = res.ok;
+            return this.hasCharacter;
+        } catch (error) {
+            console.error('❌ checkCharacter error:', error);
+            this.hasCharacter = false;
+            return false;
+        }
+    }
+
+    // ============================================
+    // 🆕 ฟังก์ชันใหม่: Auto-route หลัง Login สำเร็จ
+    // ============================================
+    async routeAfterLogin() {
+        if (!this.isAuthenticated()) {
+            // ยังไม่ login → ไป Discord OAuth
+            this.login();
+            return;
+        }
+
+        const hasChar = await this.checkCharacter();
+
+        if (!hasChar) {
+            // login แล้ว แต่ยังไม่มีตัวละคร → เด้งไป register.html
+            console.log('📝 ยังไม่มีตัวละคร → redirect ไป register.html');
+            window.location.href = 'register.html';
+        } else {
+            // มีตัวละครแล้ว → อยู่หน้า index.html (ProfileManager จะแสดงข้อมูลเอง)
+            console.log('✅ มีตัวละครแล้ว → แสดง profile');
+        }
     }
 }
 
 // Global auth instance
 const auth = new AuthManager();
 
-// Global functions for HTML onclick handlers
+// ============================================
+// 🆕 Global functions สำหรับ HTML onclick
+// ============================================
+
+// ปุ่ม "เข้าสู่ระบบ" / "เริ่มลงทะเบียน" ใน Navbar + Hero
+// → behavior ใหม่: เช็คก่อนว่ามีตัวละครหรือยัง
+function handleLoginClick() {
+    if (!auth.isAuthenticated()) {
+        // ยังไม่ login → ไป Discord OAuth
+        auth.login();
+        return;
+    }
+
+    // login แล้ว → เช็คตัวละคร แล้วค่อยตัดสินใจ
+    auth.checkCharacter().then(hasChar => {
+        if (hasChar) {
+            // มีตัวละครแล้ว → scroll ไปหน้า profile ใน index.html
+            const profileSection = document.getElementById('profileSection');
+            if (profileSection) {
+                profileSection.scrollIntoView({ behavior: 'smooth' });
+            }
+        } else {
+            // ยังไม่มี → ไป register.html
+            window.location.href = 'register.html';
+        }
+    });
+}
+
+// ปุ่ม "เข้าสู่ระบบ" แบบเดิม (ถ้าอยากให้ไปหน้า login ตรงๆ)
 function loginWithDiscord() {
     auth.login();
 }
 
-function handleLoginClick() {
-    if (auth.isAuthenticated()) {
-        window.location.href = 'register.html';
-    } else {
-        auth.login();
-    }
-}
-
+// ปุ่ม "ออกจากระบบ"
 function logout() {
     auth.logout();
 }
+
+// ============================================
+// 🆕 Auto-run หลัง Login กลับมา (OAuth redirect)
+// ============================================
+// ถ้าอยู่หน้า index.html + login แล้ว + ยังไม่เช็คตัวละคร
+// → ให้เช็คอัตโนมัติ (ไม่ต้อง auto-redirect เพราะอาจกวนผู้ใช้)
+// แต่จะ set flag ไว้ให้ ProfileManager ใช้
+document.addEventListener('DOMContentLoaded', async () => {
+    if (window.location.pathname.includes('index.html') || window.location.pathname === '/') {
+        if (auth.isAuthenticated()) {
+            // เช็คเงียบๆ ไว้ให้ ProfileManager render
+            await auth.checkCharacter();
+        }
+    }
+});
