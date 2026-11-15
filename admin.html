@@ -3,161 +3,215 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Admin - จัดการเปลี่ยนชื่อ | Yohoo School</title>
-  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <title>Admin Dashboard | Yohoo School</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="css/style.css">
   <style>
-    body { font-family: 'Kanit', sans-serif; background: #064E3B; color: white; padding: 40px 20px; }
-    .container { max-width: 1000px; margin: 0 auto; background: white; color: #1F2937; border-radius: 16px; padding: 32px; box-shadow: 0 20px 25px rgba(0,0,0,0.2); }
-    h2 { color: #064E3B; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #E5E7EB; }
-    th { background: #F3F4F6; color: #374151; font-weight: 600; }
-    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
-    .badge-pending { background: #FEF3C7; color: #92400E; }
-    .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-family: 'Kanit'; font-weight: 500; margin-right: 8px; transition: 0.2s; }
-    .btn-approve { background: #10B981; color: white; }
-    .btn-approve:hover { background: #059669; }
-    .btn-reject { background: #EF4444; color: white; }
-    .btn-reject:hover { background: #DC2626; }
-    .empty-state { text-align: center; padding: 40px; color: #6B7280; }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 999; }
-    .modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; color: #1F2937; }
-    .modal-content textarea { width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; margin: 12px 0; font-family: 'Kanit'; }
+    .admin-page { padding: 120px 24px 60px; position: relative; z-index: 1; }
+    .admin-container { max-width: 1100px; margin: 0 auto; }
+    .admin-card {
+      background: white; color: var(--text-dark);
+      border-radius: var(--radius-2xl); padding: 32px;
+      box-shadow: var(--shadow-2xl); border: 4px solid var(--primary);
+    }
+    .admin-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px; }
+    .admin-header h2 { color: var(--bg-dark); margin: 0; display: flex; align-items: center; gap: 12px; }
+    .admin-header h2 i { color: var(--primary); }
+    .admin-tabs { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 2px solid #E5E7EB; }
+    .admin-tab {
+      padding: 10px 20px; background: none; border: none; cursor: pointer;
+      font-family: 'Kanit'; font-weight: 600; font-size: 15px; color: var(--text-light);
+      border-bottom: 3px solid transparent; margin-bottom: -2px; transition: 0.2s;
+    }
+    .admin-tab.active { color: var(--primary-dark); border-bottom-color: var(--primary); }
+    .admin-tab:hover { color: var(--primary); }
+    .admin-table { width: 100%; border-collapse: collapse; }
+    .admin-table th, .admin-table td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #E5E7EB; font-size: 14px; }
+    .admin-table th { background: #F9FAFB; color: #374151; font-weight: 600; }
+    .admin-table code { background: #F3F4F6; padding: 3px 8px; border-radius: 6px; font-size: 12px; }
+    .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .status-approved { background: #D1FAE5; color: #065F46; }
+    .status-rejected { background: #FEE2E2; color: #991B1B; }
+    .btn-sm { padding: 6px 14px; font-size: 13px; border-radius: 8px; }
+    .empty-state { text-align: center; padding: 48px; color: var(--text-light); }
+    .empty-state i { font-size: 48px; color: var(--primary); margin-bottom: 16px; }
+    .admin-note { background: #F9FAFB; border-left: 4px solid var(--primary); padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; font-size: 14px; color: var(--text-light); }
+    .admin-note i { color: var(--primary); margin-right: 8px; }
   </style>
 </head>
 <body>
-  <div class="container">
-    <h2><i class="fas fa-shield-halved"></i> Admin Dashboard: คำขอเปลี่ยนชื่อ</h2>
-    
-    <div id="loading">กำลังโหลดข้อมูล...</div>
-    <div id="requestList"></div>
+  <div class="bg-elements">
+    <div class="bg-circle bg-circle-1"></div>
+    <div class="bg-circle bg-circle-2"></div>
   </div>
 
-  <!-- Modal สำหรับใส่หมายเหตุ -->
-  <div class="modal" id="noteModal">
-    <div class="modal-content">
-      <h3 id="modalTitle">ระบุเหตุผล</h3>
-      <textarea id="reviewNote" rows="3" placeholder="ระบุเหตุผล (ถ้ามี)"></textarea>
-      <div style="display: flex; justify-content: flex-end; gap: 8px;">
-        <button class="btn" style="background: #E5E7EB;" onclick="closeModal()">ยกเลิก</button>
-        <button class="btn" id="confirmActionBtn">ยืนยัน</button>
+  <div class="admin-page">
+    <div class="admin-container">
+      <div class="admin-card">
+        <div class="admin-header">
+          <h2><i class="fas fa-shield-halved"></i> Admin Dashboard: เปลี่ยนชื่อ</h2>
+          <button class="btn-logout" onclick="auth.logout()">
+            <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+          </button>
+        </div>
+
+        <div class="admin-note">
+          <i class="fas fa-info-circle"></i>
+          ล็อกอินด้วย Discord ของแอดมินเท่านั้น (ต้องอยู่ใน whitelist)
+        </div>
+
+        <div class="admin-tabs">
+          <button class="admin-tab active" onclick="switchTab('pending', this)">
+            <i class="fas fa-clock"></i> รออนุมัติ
+          </button>
+          <button class="admin-tab" onclick="switchTab('logs', this)">
+            <i class="fas fa-history"></i> ประวัติทั้งหมด
+          </button>
+        </div>
+
+        <div id="tableArea">
+          <div class="empty-state"><i class="fas fa-spinner fa-spin"></i><br>กำลังโหลด...</div>
+        </div>
       </div>
     </div>
   </div>
 
+  <!-- Modal -->
+  <div class="modal-overlay" id="noteModal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle"><i class="fas fa-pen"></i> หมายเหตุ</h3>
+        <button class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <textarea id="reviewNote" rows="3" style="width:100%; padding:12px; border:2px solid #E5E7EB; border-radius:8px; font-family:'Kanit';" placeholder="ระบุเหตุผล (ถ้ามี)"></textarea>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn-primary" id="confirmBtn" onclick="submitAction()">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
   <script>
-    // ⚠️ เปลี่ยนค่านี้เป็นรหัสลับของคุณ (ต้องตรงกับใน Vercel Environment Variables: ADMIN_SECRET)
-    const ADMIN_SECRET = 'your_super_secret_admin_key_123'; 
-    // ⚠️ ใส่ Discord ID ของคุณเองที่นี่ เพื่อให้ระบบรู้ว่าแอดมินคนนี้เป็นคนกด
-    const MY_DISCORD_ID = '1346389669297782845'; 
+    let currentId = null, currentAction = null, currentAdminId = null;
 
-    let currentRequestId = null;
-    let currentAction = null;
+    // ✅ Auth ก่อนเข้าหน้า
+    (async () => {
+      if (!auth.isAuthenticated()) {
+        alert('กรุณาเข้าสู่ระบบด้วย Discord ก่อน');
+        auth.login();
+        return;
+      }
+      const user = await auth.getUser();
+      currentAdminId = user.id;
 
-    async function loadRequests() {
-      document.getElementById('loading').style.display = 'block';
-      document.getElementById('requestList').innerHTML = '';
+      // ทดลองดึงข้อมูล → ถ้า 403 = ไม่ใช่แอดมิน
+      const test = await fetch(`/api/admin-list?admin_id=${currentAdminId}`);
+      if (test.status === 403) {
+        alert('❌ คุณไม่มีสิทธิ์เข้าถึงหน้านี้\n(ต้องเพิ่ม Discord ID ใน ADMIN_DISCORD_IDS)');
+        auth.logout();
+        return;
+      }
+      loadPending();
+    })();
 
-      // ใช้ anon key ดึงข้อมูลเฉพาะที่ status = 'pending'
-      // หมายเหตุ: ใน production ควรตั้ง RLS policy ให้ดึงได้เฉพาะแอดมิน
-      const res = await fetch(`https://jgqhiotyxvqnlroowpitd.supabase.co/rest/v1/name_change_requests?status=eq.pending&select=*&order=requested_at.desc`, {
-        headers: {
-          'apikey': 'YOUR_SUPABASE_ANON_KEY', // <-- ใส่ Anon Key ของคุณที่นี่
-          'Authorization': 'Bearer YOUR_SUPABASE_ANON_KEY' // <-- ใส่ Anon Key ของคุณที่นี่
-        }
-      });
-
+    async function loadPending() {
+      const res = await fetch(`/api/admin-list?admin_id=${currentAdminId}`);
       const data = await res.json();
-      document.getElementById('loading').style.display = 'none';
+      renderTable(data.data, 'pending');
+    }
 
-      if (data.length === 0) {
-        document.getElementById('requestList').innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="font-size: 48px; color: #10B981; margin-bottom: 16px;"></i><br>ไม่มีคำขอที่รอการอนุมัติ</div>';
+    async function loadLogs() {
+      const res = await fetch(`/api/admin-logs?admin_id=${currentAdminId}`);
+      const data = await res.json();
+      renderTable(data.data, 'logs');
+    }
+
+    function renderTable(rows, mode) {
+      const area = document.getElementById('tableArea');
+      if (!rows || rows.length === 0) {
+        area.innerHTML = '<div class="empty-state"><i class="fas fa-check-circle"></i><br>' +
+          (mode === 'pending' ? 'ไม่มีคำขอที่รออยู่' : 'ยังไม่มีประวัติ') + '</div>';
         return;
       }
 
-      let html = `<table>
-        <thead>
-          <tr>
-            <th>วันที่ขอ</th>
-            <th>Discord ID</th>
-            <th>ชื่อเดิม</th>
-            <th>ชื่อที่ขอเปลี่ยน</th>
-            <th>จัดการ</th>
-          </tr>
-        </thead>
-        <tbody>`;
+      let html = '<table class="admin-table"><thead><tr>';
+      html += '<th>วันที่</th><th>Discord ID</th><th>ชื่อเดิม</th><th>ชื่อใหม่</th>';
+      html += mode === 'pending' ? '<th>จัดการ</th>' : '<th>สถานะ / ผู้ดำเนินการ</th>';
+      html += '</tr></thead><tbody>';
 
-      data.forEach(req => {
-        const date = new Date(req.requested_at).toLocaleDateString('th-TH');
+      rows.forEach(r => {
+        const date = new Date(r.requested_at).toLocaleDateString('th-TH');
         html += `<tr>
           <td>${date}</td>
-          <td><code>${req.identifier}</code></td>
-          <td>${req.old_firstname} ${req.old_lastname}</td>
-          <td><strong style="color: #059669;">${req.new_firstname} ${req.new_lastname}</strong></td>
-          <td>
-            <button class="btn btn-approve" onclick="openModal('${req.id}', 'approve')"><i class="fas fa-check"></i> อนุมัติ</button>
-            <button class="btn btn-reject" onclick="openModal('${req.id}', 'reject')"><i class="fas fa-times"></i> ปฏิเสธ</button>
-          </td>
-        </tr>`;
-      });
+          <td><code>${r.identifier}</code></td>
+          <td>${r.old_firstname} ${r.old_lastname}</td>
+          <td><strong style="color:#059669;">${r.new_firstname} ${r.new_lastname}</strong></td>`;
 
+        if (mode === 'pending') {
+          html += `<td>
+            <button class="btn-warning btn-sm" onclick="openModal('${r.id}','approve')"><i class="fas fa-check"></i> อนุมัติ</button>
+            <button class="btn-danger btn-sm" onclick="openModal('${r.id}','reject')"><i class="fas fa-times"></i> ปฏิเสธ</button>
+          </td>`;
+        } else {
+          const badge = r.status === 'approved'
+            ? '<span class="status-badge status-approved">✅ อนุมัติ</span>'
+            : '<span class="status-badge status-rejected">❌ ปฏิเสธ</span>';
+          const reviewer = r.reviewed_by ? `<code>${r.reviewed_by}</code>` : '-';
+          const note = r.review_notes ? `<br><small>${r.review_notes}</small>` : '';
+          html += `<td>${badge}${note}<br><small style="color:#9CA3AF">โดย ${reviewer}</small></td>`;
+        }
+        html += '</tr>';
+      });
       html += '</tbody></table>';
-      document.getElementById('requestList').innerHTML = html;
+      area.innerHTML = html;
+    }
+
+    function switchTab(mode, btn) {
+      document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+      btn.classList.add('active');
+      if (mode === 'pending') loadPending();
+      else loadLogs();
     }
 
     function openModal(id, action) {
-      currentRequestId = id;
-      currentAction = action;
-      document.getElementById('modalTitle').innerText = action === 'approve' ? 'ยืนยันการอนุมัติ' : 'ระบุเหตุผลที่ปฏิเสธ';
+      currentId = id; currentAction = action;
+      document.getElementById('modalTitle').innerHTML =
+        action === 'approve' ? '<i class="fas fa-check"></i> ยืนยันอนุมัติ' : '<i class="fas fa-times"></i> ระบุเหตุผลที่ปฏิเสธ';
       document.getElementById('reviewNote').value = '';
       document.getElementById('noteModal').style.display = 'flex';
-      
-      document.getElementById('confirmActionBtn').onclick = submitAction;
-      document.getElementById('confirmActionBtn').className = `btn ${action === 'approve' ? 'btn-approve' : 'btn-reject'}`;
-      document.getElementById('confirmActionBtn').innerText = action === 'approve' ? 'อนุมัติเลย' : 'ปฏิเสธ';
     }
-
-    function closeModal() {
-      document.getElementById('noteModal').style.display = 'none';
-      currentRequestId = null;
-      currentAction = null;
-    }
+    function closeModal() { document.getElementById('noteModal').style.display = 'none'; }
 
     async function submitAction() {
-      const note = document.getElementById('reviewNote').value;
-      const btn = document.getElementById('confirmActionBtn');
-      btn.innerText = 'กำลังดำเนินการ...';
-      btn.disabled = true;
+      const btn = document.getElementById('confirmBtn');
+      btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังบันทึก...'; btn.disabled = true;
 
       const res = await fetch('/api/admin-name-change', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${ADMIN_SECRET}`
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          request_id: currentRequestId,
+          request_id: currentId,
           action: currentAction,
-          admin_id: MY_DISCORD_ID,
-          review_notes: note
+          admin_id: currentAdminId,
+          review_notes: document.getElementById('reviewNote').value
         })
       });
-
       const result = await res.json();
-      if (result.success) {
-        alert(result.message);
-        closeModal();
-        loadRequests(); // โหลดใหม่
-      } else {
-        alert('เกิดข้อผิดพลาด: ' + result.error);
-      }
-      
-      btn.disabled = false;
-    }
+      btn.disabled = false; btn.innerHTML = 'ยืนยัน';
 
-    // โหลดข้อมูลเมื่อเปิดหน้า
-    loadRequests();
+      if (result.success) {
+        closeModal();
+        alert('✅ ' + result.message);
+        loadPending();
+      } else {
+        alert('❌ ' + result.error);
+      }
+    }
   </script>
 </body>
 </html>
