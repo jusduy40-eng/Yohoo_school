@@ -5,15 +5,16 @@ export default async function handler(req, res) {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
 
-  // ตรวจสอบความลับของแอดมิน (ป้องกันคนนอกมายิง API)
-  if (req.headers.authorization !== `Bearer ${process.env.ADMIN_SECRET}`) {
-    return res.status(401).json({ success: false, error: 'Unauthorized' });
-  }
-
   const { request_id, action, admin_id, review_notes } = req.body;
 
   if (!request_id || !action || !admin_id) {
     return res.status(400).json({ success: false, error: 'ข้อมูลไม่ครบ' });
+  }
+
+  // ✅ ตรวจสอบสิทธิ์แอดมินผ่าน Discord ID Whitelist (แทน ADMIN_SECRET)
+  const allowedIds = (process.env.ADMIN_DISCORD_IDS || '').split(',').map(s => s.trim());
+  if (!allowedIds.includes(admin_id)) {
+    return res.status(403).json({ success: false, error: 'คุณไม่มีสิทธิ์ดำเนินการนี้ (Unauthorized Admin)' });
   }
 
   const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
