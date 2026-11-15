@@ -223,11 +223,18 @@
               <i class="fas fa-sync-alt"></i>
               <span>รีเฟรชข้อมูล</span>
             </button>
-            <button class="btn-danger" onclick="deleteCharacter()">
-              <i class="fas fa-trash-alt"></i>
-              <span>ลบลักษณะ</span>
+            <button class="btn-warning" onclick="openNameChangeModal()" id="btnRequestNameChange">
+              <i class="fas fa-pen-to-square"></i>
+              <span>ขอเปลี่ยนชื่อตัวละคร</span>
             </button>
           </div>
+
+          <!-- สถานะ: กำลังรออนุมัติเปลี่ยนชื่อ -->
+          <div class="profile-pending-alert" id="profilePendingAlert" style="display: none;">
+            <i class="fas fa-clock"></i>
+            <span>🟡 คุณมีคำขอเปลี่ยนชื่อรอการอนุมัติจากทีมงาน กรุณา耐心等待</span>
+          </div>
+
         </div>
       </div>
     </div>
@@ -343,10 +350,36 @@
     </div>
   </footer>
 
+  <!-- Modal: ขอเปลี่ยนชื่อตัวละคร -->
+  <div class="modal-overlay" id="nameChangeModal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-pen-to-square"></i> ขอเปลี่ยนชื่อตัวละคร</h3>
+        <button class="modal-close" onclick="closeNameChangeModal()"><i class="fas fa-times"></i></button>
+      </div>
+      <div class="modal-body">
+        <p class="modal-desc">กรุณากรอกชื่อ-นามสกุลใหม่ที่ต้องการเปลี่ยน (ต้องเป็นชื่อที่สมจริงและเหมาะสมกับบทบาท)</p>
+        <div class="form-group">
+          <label>ชื่อใหม่ (First Name)</label>
+          <input type="text" id="newFirstName" placeholder="เช่น Somchai" maxlength="50">
+        </div>
+        <div class="form-group">
+          <label>นามสกุลใหม่ (Last Name)</label>
+          <input type="text" id="newLastName" placeholder="เช่น Jai-dee" maxlength="50">
+        </div>
+        <div class="modal-error" id="modalError" style="display: none; color: #ef4444; font-size: 14px; margin-top: 10px;"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary" onclick="closeNameChangeModal()">ยกเลิก</button>
+        <button class="btn-primary" onclick="submitNameChange()">ส่งคำขอ</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Scripts -->
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
-  <script src="js/profile.js"></script> <!-- เพิ่มไฟล์จัดการโปรไฟล์ -->
+  <script src="js/profile.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>
