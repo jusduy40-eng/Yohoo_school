@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - จัดการเปลี่ยนชื่อ | Yohoo School</title>
+  <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <style>
+    body { font-family: 'Kanit', sans-serif; background: #064E3B; color: white; padding: 40px 20px; }
+    .container { max-width: 1000px; margin: 0 auto; background: white; color: #1F2937; border-radius: 16px; padding: 32px; box-shadow: 0 20px 25px rgba(0,0,0,0.2); }
+    h2 { color: #064E3B; margin-bottom: 24px; display: flex; align-items: center; gap: 10px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #E5E7EB; }
+    th { background: #F3F4F6; color: #374151; font-weight: 600; }
+    .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; }
+    .badge-pending { background: #FEF3C7; color: #92400E; }
+    .btn { padding: 8px 16px; border: none; border-radius: 8px; cursor: pointer; font-family: 'Kanit'; font-weight: 500; margin-right: 8px; transition: 0.2s; }
+    .btn-approve { background: #10B981; color: white; }
+    .btn-approve:hover { background: #059669; }
+    .btn-reject { background: #EF4444; color: white; }
+    .btn-reject:hover { background: #DC2626; }
+    .empty-state { text-align: center; padding: 40px; color: #6B7280; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); align-items: center; justify-content: center; z-index: 999; }
+    .modal-content { background: white; padding: 24px; border-radius: 12px; width: 90%; max-width: 400px; color: #1F2937; }
+    .modal-content textarea { width: 100%; padding: 10px; border: 1px solid #D1D5DB; border-radius: 8px; margin: 12px 0; font-family: 'Kanit'; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h2><i class="fas fa-shield-halved"></i> Admin Dashboard: คำขอเปลี่ยนชื่อ</h2>
+    
+    <div id="loading">กำลังโหลดข้อมูล...</div>
+    <div id="requestList"></div>
+  </div>
+
+  <!-- Modal สำหรับใส่หมายเหตุ -->
+  <div class="modal" id="noteModal">
+    <div class="modal-content">
+      <h3 id="modalTitle">ระบุเหตุผล</h3>
+      <textarea id="reviewNote" rows="3" placeholder="ระบุเหตุผล (ถ้ามี)"></textarea>
+      <div style="display: flex; justify-content: flex-end; gap: 8px;">
+        <button class="btn" style="background: #E5E7EB;" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn" id="confirmActionBtn">ยืนยัน</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // ⚠️ เปลี่ยนค่านี้เป็นรหัสลับของคุณ (ต้องตรงกับใน Vercel Environment Variables: ADMIN_SECRET)
+    const ADMIN_SECRET = 'your_super_secret_admin_key_123'; 
+    // ⚠️ ใส่ Discord ID ของคุณเองที่นี่ เพื่อให้ระบบรู้ว่าแอดมินคนนี้เป็นคนกด
+    const MY_DISCORD_ID = '1346389669297782845'; 
+
+    let currentRequestId = null;
+    let currentAction = null;
+
+    async function loadRequests() {
+      document.getElementById('loading').style.display = 'block';
+      document.getElementById('requestList').innerHTML = '';
+
+      // ใช้ anon key ดึงข้อมูลเฉพาะที่ status = 'pending'
+      // หมายเหตุ: ใน production ควรตั้ง RLS policy ให้ดึงได้เฉพาะแอดมิน
+      const res = await fetch(`https://jgqhiotyxvqnlroowpitd.supabase.co/rest/v1/name_change_requests?status=eq.pending&select=*&order=requested_at.desc`, {
+        headers: {
+          'apikey': 'YOUR_SUPABASE_ANON_KEY', // <-- ใส่ Anon Key ของคุณที่นี่
+          'Authorization': 'Bearer YOUR_SUPABASE_ANON_KEY' // <-- ใส่ Anon Key ของคุณที่นี่
+        }
+      });
+
+      const data = await res.json();
+      document.getElementById('loading').style.display = 'none';
+
+      if (data.length === 0) {
+        document.getElementById('requestList').innerHTML = '<div class="empty-state"><i class="fas fa-check-circle" style="font-size: 48px; color: #10B981; margin-bottom: 16px;"></i><br>ไม่มีคำขอที่รอการอนุมัติ</div>';
+        return;
+      }
+
+      let html = `<table>
+        <thead>
+          <tr>
+            <th>วันที่ขอ</th>
+            <th>Discord ID</th>
+            <th>ชื่อเดิม</th>
+            <th>ชื่อที่ขอเปลี่ยน</th>
+            <th>จัดการ</th>
+          </tr>
+        </thead>
+        <tbody>`;
+
+      data.forEach(req => {
+        const date = new Date(req.requested_at).toLocaleDateString('th-TH');
+        html += `<tr>
+          <td>${date}</td>
+          <td><code>${req.identifier}</code></td>
+          <td>${req.old_firstname} ${req.old_lastname}</td>
+          <td><strong style="color: #059669;">${req.new_firstname} ${req.new_lastname}</strong></td>
+          <td>
+            <button class="btn btn-approve" onclick="openModal('${req.id}', 'approve')"><i class="fas fa-check"></i> อนุมัติ</button>
+            <button class="btn btn-reject" onclick="openModal('${req.id}', 'reject')"><i class="fas fa-times"></i> ปฏิเสธ</button>
+          </td>
+        </tr>`;
+      });
+
+      html += '</tbody></table>';
+      document.getElementById('requestList').innerHTML = html;
+    }
+
+    function openModal(id, action) {
+      currentRequestId = id;
+      currentAction = action;
+      document.getElementById('modalTitle').innerText = action === 'approve' ? 'ยืนยันการอนุมัติ' : 'ระบุเหตุผลที่ปฏิเสธ';
+      document.getElementById('reviewNote').value = '';
+      document.getElementById('noteModal').style.display = 'flex';
+      
+      document.getElementById('confirmActionBtn').onclick = submitAction;
+      document.getElementById('confirmActionBtn').className = `btn ${action === 'approve' ? 'btn-approve' : 'btn-reject'}`;
+      document.getElementById('confirmActionBtn').innerText = action === 'approve' ? 'อนุมัติเลย' : 'ปฏิเสธ';
+    }
+
+    function closeModal() {
+      document.getElementById('noteModal').style.display = 'none';
+      currentRequestId = null;
+      currentAction = null;
+    }
+
+    async function submitAction() {
+      const note = document.getElementById('reviewNote').value;
+      const btn = document.getElementById('confirmActionBtn');
+      btn.innerText = 'กำลังดำเนินการ...';
+      btn.disabled = true;
+
+      const res = await fetch('/api/admin-name-change', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${ADMIN_SECRET}`
+        },
+        body: JSON.stringify({
+          request_id: currentRequestId,
+          action: currentAction,
+          admin_id: MY_DISCORD_ID,
+          review_notes: note
+        })
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        alert(result.message);
+        closeModal();
+        loadRequests(); // โหลดใหม่
+      } else {
+        alert('เกิดข้อผิดพลาด: ' + result.error);
+      }
+      
+      btn.disabled = false;
+    }
+
+    // โหลดข้อมูลเมื่อเปิดหน้า
+    loadRequests();
+  </script>
+</body>
+</html>
