@@ -17,7 +17,7 @@
     <div class="loading-content">
       <img src="images/logo.png" alt="Yohoo School" class="loading-logo-img">
       <div class="loading-bar"><div class="loading-bar-fill"></div></div>
-      <p class="loading-text">กำลังตรวจสอบการเข้าสู่ระบบ...</p>
+      <p class="loading-text">กำลังตรวจสอบสถานะ...</p>
     </div>
   </div>
 
@@ -41,6 +41,29 @@
         <i class="fas fa-arrow-left"></i>
         <span>กลับหน้าหลัก</span>
       </a>
+    </div>
+  </div>
+
+  <!-- ✅ NEW: Already Registered Screen -->
+  <div class="auth-required" id="alreadyRegistered" style="display: none;">
+    <div class="auth-card">
+      <div style="
+        width: 90px; height: 90px; border-radius: 50%;
+        background: linear-gradient(135deg, #ECFDF5, #A7F3D0);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 40px; color: #10B981; margin: 0 auto 20px;
+      ">
+        <i class="fas fa-circle-check"></i>
+      </div>
+      <h2>คุณลงทะเบียนแล้ว! ✅</h2>
+      <p>บัญชี Discord นี้มีตัวละครในระบบ Yohoo School เรียบร้อยแล้ว<br>ไม่ต้องลงทะเบียนซ้ำ</p>
+      <a href="index.html" class="btn-primary" style="display: inline-flex; text-decoration: none;">
+        <i class="fas fa-house"></i>
+        <span>กลับหน้าหลัก</span>
+      </a>
+      <p id="redirectTimer" style="font-size: 13px; color: #9CA3AF; margin-top: 16px;">
+        จะพาไปหน้าหลักใน <strong>4</strong> วินาที...
+      </p>
     </div>
   </div>
 
@@ -223,5 +246,45 @@
   <script src="js/config.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/register.js"></script>
+
+  <!-- ✅ NEW: Gatekeeper — บล็อกคนที่ลงทะเบียนแล้ว -->
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      // รอ register.js init ก่อน (มันรัน DOMContentLoaded ของมันเอง)
+      await new Promise(r => setTimeout(r, 300));
+
+      // กรณี 1: ยังไม่ login → ให้ register.js แสดง authRequired ตามเดิม
+      if (!auth.isAuthenticated()) {
+        document.getElementById('loadingScreen').classList.add('hidden');
+        return;
+      }
+
+      // กรณี 2: login แล้ว → เช็คมีตัวละครไหม
+      const hasCharacter = await auth.checkCharacter();
+
+      if (hasCharacter) {
+        // ซ่อนฟอร์ม + loading → แสดงการ์ด "ลงทะเบียนแล้ว"
+        document.getElementById('registerContainer').style.display = 'none';
+        document.getElementById('authRequired').style.display = 'none';
+        document.getElementById('alreadyRegistered').style.display = 'flex';
+        document.getElementById('loadingScreen').classList.add('hidden');
+
+        // Countdown auto-redirect
+        let sec = 4;
+        const timer = setInterval(() => {
+          sec--;
+          const el = document.getElementById('redirectTimer');
+          if (el) el.innerHTML = `จะพาไปหน้าหลักใน <strong>${sec}</strong> วินาที...`;
+          if (sec <= 0) {
+            clearInterval(timer);
+            window.location.href = 'index.html';
+          }
+        }, 1000);
+      } else {
+        // ยังไม่มีตัวละคร → ปล่อยให้ register.js แสดงฟอร์มตามปกติ
+        document.getElementById('loadingScreen').classList.add('hidden');
+      }
+    });
+  </script>
 </body>
 </html>
